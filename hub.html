@@ -581,6 +581,29 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Roboto',
 .cpi.sel{border-color:var(--ac);background:rgba(168,199,250,.08)}
 .cpi-em{font-size:18px}.cpi-nm{font-size:13px;font-weight:500;flex:1}.cpi-cnt{font-size:11px;color:var(--mu)}
 
+/* SOURCE MODAL TABS */
+.src-modal-tabs{display:flex;gap:0;margin-bottom:14px;background:var(--sf3);border-radius:10px;padding:3px}
+.src-mtab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:500;
+  color:var(--mu);border:none;background:none;font-family:inherit;cursor:pointer;
+  border-radius:8px;transition:all .15s}
+.src-mtab.on{background:var(--bd);color:var(--tx)}
+.src-panel{display:none}.src-panel.on{display:block}
+/* inline error box */
+.fld-err{font-size:11px;color:#f87171;margin-top:4px;display:none;padding:6px 10px;
+  background:rgba(248,113,113,.08);border-radius:6px;border-left:2px solid #f87171}
+.fld-err.show{display:block}
+.inp.err{border-color:#f87171}
+/* code textarea */
+.code-inp{
+  width:100%;background:var(--sf3);border:1px solid var(--bd);color:#c3e88d;
+  font-family:monospace;font-size:11px;padding:10px 12px;border-radius:10px;
+  outline:none;resize:vertical;min-height:160px;line-height:1.6;
+  transition:border-color .2s;
+}
+.code-inp:focus{border-color:var(--ac)}
+.code-inp.err{border-color:#f87171}
+.code-inp::placeholder{color:#3a3a3a}
+
 /* SPINNER / STATES */
 .spw{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;flex:1}
 .sp{width:28px;height:28px;border-radius:50%;border:3px solid var(--sf3);border-top-color:var(--ac);animation:spin .7s linear infinite}
@@ -807,13 +830,27 @@ svg{flex-shrink:0}
 
     <!-- Manga browse view (shown when source selected) -->
     <div id="browse-detail" style="display:none;flex-direction:column;height:100%">
-      <div class="browse-topbar">
+      <!-- Topbar: back | icon | name | search (inline) | browser btn -->
+      <div class="browse-topbar" style="gap:4px">
         <button class="ic-btn" onclick="closeBrowseDetail()" id="browse-back-btn">
           <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
-        <span id="browse-src-name" style="font-size:16px;font-weight:500;flex:1"></span>
-        <span id="browse-src-icon" style="font-size:18px;margin-right:4px"></span>
+        <span id="browse-src-icon" style="font-size:18px;flex-shrink:0"></span>
+        <!-- Search bar inline in topbar -->
+        <div class="search-bar" style="flex:1;margin:0;height:36px;min-width:0">
+          <svg width="15" height="15" fill="none" stroke="#555" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="search-inp" placeholder="Search…" autocomplete="off"
+            oninput="onSearchInput(this.value)"
+            style="font-size:13px"/>
+          <button id="search-clear" onclick="clearSearch()"
+            style="background:none;border:none;color:#555;cursor:pointer;font-size:18px;padding:0;display:none;line-height:1">×</button>
+        </div>
+        <!-- Browser button -->
+        <button class="ic-btn" onclick="openBrowserForSource()" id="browse-src-browser-btn" title="Open browser for this source">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </button>
       </div>
+      <!-- Tabs + lang -->
       <div class="browse-tabs-bar">
         <button class="brtab on" id="brtab-pop" onclick="browseSwitchTab('popular')">Popular</button>
         <button class="brtab" id="brtab-lat" onclick="browseSwitchTab('latest')">Latest</button>
@@ -823,11 +860,6 @@ svg{flex-shrink:0}
           <option value="ko">KO</option><option value="zh">ZH</option><option value="fr">FR</option>
           <option value="es">ES</option><option value="pt">PT</option>
         </select>
-      </div>
-      <div class="search-bar" style="margin:8px 12px;flex-shrink:0">
-        <svg width="16" height="16" fill="none" stroke="#555" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input id="search-inp" placeholder="Search…" autocomplete="off" oninput="onSearchInput(this.value)"/>
-        <button id="search-clear" onclick="clearSearch()" style="background:none;border:none;color:#555;cursor:pointer;font-size:18px;padding:0;display:none;line-height:1">×</button>
       </div>
       <div class="page-wrap" id="browse-content"></div>
     </div>
@@ -1048,6 +1080,94 @@ svg{flex-shrink:0}
     </div>
   </div>
 
+  <!-- ── BROWSER SUB-PAGE ── -->
+  <div id="page-browser" style="display:none;flex-direction:column;position:absolute;inset:0;background:var(--bg);z-index:600;">
+
+    <!-- Top bar — BACK button prominent -->
+    <div style="display:flex;align-items:center;gap:6px;padding:8px 8px 6px;background:var(--sf);border-bottom:1px solid var(--bd);flex-shrink:0">
+      <!-- Back / close — big and obvious -->
+      <button onclick="closeBrowserPage()"
+        style="display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--bd);
+               color:var(--tx);font-family:inherit;font-size:13px;font-weight:500;
+               padding:7px 12px;border-radius:10px;cursor:pointer;flex-shrink:0;
+               transition:background .15s,border-color .15s"
+        onmouseenter="this.style.background='rgba(255,255,255,.07)'"
+        onmouseleave="this.style.background='none'">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </button>
+      <!-- URL bar -->
+      <div style="flex:1;display:flex;align-items:center;gap:5px;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:0 8px;height:36px;min-width:0">
+        <input id="br-url-inp" type="text" placeholder="https://… or intent://…"
+          style="flex:1;background:none;border:none;outline:none;color:var(--tx);font-size:12px;font-family:inherit;min-width:0"
+          onkeydown="if(event.key==='Enter')brOpen(this.value)"/>
+        <button onclick="brOpen(document.getElementById('br-url-inp').value).then(()=>brOpenTab())"
+          title="Open in new tab"
+          style="background:var(--ac);color:#000;border:none;cursor:pointer;padding:5px 10px;
+                 border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;
+                 display:flex;align-items:center;gap:3px;flex-shrink:0;white-space:nowrap">
+          Open ↗
+        </button>
+      </div>
+    </div>
+
+    <!-- Source quick-buttons -->
+    <div id="br-src-bar" style="display:flex;gap:6px;padding:6px 10px;overflow-x:auto;flex-shrink:0;border-bottom:1px solid var(--bd);scrollbar-width:none"></div>
+
+    <!-- Helper content -->
+    <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px 16px;text-align:center">
+
+      <!-- Steps -->
+      <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--tx);text-align:left;margin-bottom:4px">Steps to bypass Cloudflare:</div>
+        <div style="display:flex;gap:10px;align-items:flex-start;background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:12px;text-align:left">
+          <span style="font-size:18px;flex-shrink:0">1️⃣</span>
+          <span style="font-size:12px;color:var(--mu);line-height:1.5">Tap a source chip above → tap <strong style="color:var(--tx)">Open ↗</strong> → site opens in new tab</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:12px;text-align:left">
+          <span style="font-size:18px;flex-shrink:0">2️⃣</span>
+          <span style="font-size:12px;color:var(--mu);line-height:1.5">Solve Cloudflare / login challenge in that tab</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;background:rgba(168,199,250,.08);border:1px solid rgba(168,199,250,.2);border-radius:10px;padding:12px;text-align:left">
+          <span style="font-size:18px;flex-shrink:0">3️⃣</span>
+          <span style="font-size:12px;color:var(--mu);line-height:1.5">Close that tab → come back here → tap <strong style="color:var(--ac)">← Back & Reload</strong></span>
+        </div>
+      </div>
+
+
+
+      <!-- Intent URL converter -->
+      <div style="width:100%;max-width:380px;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:14px;text-align:left">
+        <div style="font-size:12px;font-weight:600;color:#fbbf24;margin-bottom:6px">⚠ Got "intent://" or "ERR_UNKNOWN_URL_SCHEME" error?</div>
+        <div style="font-size:11px;color:var(--mu);margin-bottom:8px;line-height:1.5">Paste the full intent:// URL from the error page — auto-converted to https://</div>
+        <textarea id="br-intent-inp" rows="2" placeholder="Paste intent:// URL here…"
+          style="width:100%;background:var(--sf3);border:1px solid var(--bd);color:var(--tx);
+                 font-family:monospace;font-size:11px;padding:8px;border-radius:8px;
+                 outline:none;resize:none;box-sizing:border-box;line-height:1.4"
+          oninput="brIntentPreview(this.value)"
+          onkeydown="if(event.ctrlKey&&event.key==='Enter')brConvertIntent()"></textarea>
+        <div id="br-intent-preview" style="font-size:11px;color:#4ade80;margin:5px 0 7px;display:none;word-break:break-all"></div>
+        <button onclick="brConvertIntent()"
+          style="width:100%;background:#fbbf24;color:#000;border:none;font-family:inherit;
+                 font-size:12px;font-weight:600;padding:9px;border-radius:8px;cursor:pointer">
+          Convert &amp; Open ↗
+        </button>
+      </div>
+
+      <!-- Back button -->
+      <button onclick="closeBrowserPage()"
+        style="width:100%;max-width:380px;background:var(--sf2);color:var(--tx);
+               border:1px solid var(--bd);font-family:inherit;font-size:13px;font-weight:600;
+               padding:12px;border-radius:12px;cursor:pointer;
+               display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back &amp; Reload Sources
+      </button>
+
+      <div id="br-last-opened" style="font-size:11px;color:#555;word-break:break-all;max-width:380px"></div>
+    </div>
+  </div>
+
   <!-- ── MENU POPUP ── -->
   <div id="ov-menu" class="ov" onclick="if(event.target===this)closeMenu()">
     <div class="modal" style="border-radius:20px 20px 0 0">
@@ -1069,13 +1189,54 @@ svg{flex-shrink:0}
       <div class="modal-drag"></div>
       <div class="modal-title">Add Source</div>
       <div class="modal-body">
-        <div class="fld"><label>Name</label><input class="inp" id="f-name" placeholder="MangaHere"/></div>
-        <div class="fld"><label>Filename (same folder as hub.html)</label><input class="inp" id="f-file" placeholder="mangadex-source.html"/></div>
-        <div class="fld"><label>Icon (emoji)</label><input class="inp" id="f-icon" placeholder="🔵" style="max-width:90px"/></div>
+
+        <!-- Tab switcher -->
+        <div class="src-modal-tabs">
+          <button class="src-mtab on" id="smtab-file" onclick="srcModalTab('file')">📄 File</button>
+          <button class="src-mtab"    id="smtab-paste" onclick="srcModalTab('paste')">📋 Paste Code</button>
+        </div>
+
+        <!-- Shared fields -->
+        <div class="fld">
+          <label>Name</label>
+          <input class="inp" id="f-name" placeholder="My Source" oninput="clearFldErr('f-name')"/>
+          <div class="fld-err" id="err-f-name"></div>
+        </div>
+        <div class="fld" style="display:flex;gap:8px">
+          <div style="flex:1">
+            <label>Icon (emoji)</label>
+            <input class="inp" id="f-icon" placeholder="🔵"/>
+          </div>
+        </div>
+
+        <!-- FILE panel -->
+        <div class="src-panel on" id="spanel-file">
+          <div class="fld">
+            <label>Filename <span style="color:var(--mu)">(same folder as hub.html)</span></label>
+            <input class="inp" id="f-file" placeholder="mysource.html" oninput="clearFldErr('f-file')"/>
+            <div class="fld-err" id="err-f-file"></div>
+          </div>
+        </div>
+
+        <!-- PASTE panel -->
+        <div class="src-panel" id="spanel-paste">
+          <div class="fld">
+            <label>Source code <span style="color:var(--mu)">(paste your source JS)</span></label>
+            <textarea class="code-inp" id="f-code"
+              placeholder="window.__SOURCE__ = { MANIFEST: {...}, getPopular, ... };"
+              oninput="clearFldErr('f-code')"></textarea>
+            <div class="fld-err" id="err-f-code"></div>
+          </div>
+        </div>
+
+        <!-- Global error -->
+        <div class="fld-err" id="err-global" style="margin-top:8px"></div>
       </div>
       <div class="modal-btns">
         <button class="btn btn-cancel" onclick="closeSourceModal()">Cancel</button>
-        <button class="btn btn-ok" onclick="confirmAddSource()">Add</button>
+        <button class="btn btn-ok" onclick="confirmAddSource()">
+          <span id="src-btn-label">Add</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1555,15 +1716,35 @@ const allSrc=()=>[...BUILTIN,...S.getSrc()];
 const loadedSources={};
 async function loadSource(source){
   if(loadedSources[source.id])return loadedSources[source.id];
-  let html;
-  // SECURITY: validate file path before fetching
-  const _sf = source.file;
-  if(/\.\.|^https?:\/\/|^\/\//i.test(_sf))
-    throw new Error('Source path rejected: external or traversal paths not allowed');
-  try{const r=await fetch(_sf,{credentials:'omit'});if(!r.ok)throw new Error('HTTP '+r.status);html=await r.text();}
-  catch(e){throw new Error('Cannot load "'+_sf+'". ('+e.message+')');}
-  const m=html.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
-  if(!m)throw new Error('"'+source.file+'" has no <script> tag');
+  let scriptCode;
+
+  // ── INLINE source (pasted code) ──
+  if(source.inline || String(source.file).startsWith('__inline__')){
+    const stored = localStorage.getItem('mhub_src_code_'+source.id);
+    if(!stored) throw new Error('Inline source code not found. Try re-adding the source.');
+    scriptCode = stored;
+  } else {
+    // ── FILE source ──
+    let html2;
+    const _sf = source.file;
+    if(/\.\.|^https?:\/\/|^\/\//i.test(_sf))
+      throw new Error('Source path rejected: external or traversal paths not allowed');
+    try{
+      const r=await fetch(_sf,{credentials:'omit'});
+      if(!r.ok) throw new Error('HTTP '+r.status+' — file not found or not accessible');
+      html2=await r.text();
+    }catch(e){
+      if(e.message.startsWith('HTTP')) throw e;
+      throw new Error('Cannot load "'+_sf+'". Make sure the file is in the same folder as hub.html.');
+    }
+    const m=html2.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
+    if(!m) throw new Error('"'+source.file+'" has no <script> tag. The file must contain a <script> block with window.__SOURCE__.');
+    scriptCode = m[1];
+  }
+  // Reuse the variable name the rest of the function expects
+  const m = [null, scriptCode];
+  if(false){  // dummy block to keep linter happy
+  }
   // SECURITY: fakeWindow gets only safe globals; real window is not exposed
   const fakeWindow={
     // Source code may call fetch, encodeURIComponent, JSON, etc.
@@ -1972,8 +2153,25 @@ function renderBrowseHome(){
         <div class="src-name">${esc(s.name)}</div>
         <div class="src-lang">${esc(s.langs||'Multi')}</div>
       </div>
+      <button onclick="event.stopPropagation();openBrowserForSourceId('${sanitizeId(s.id)}')"
+        title="Open browser for ${esc(s.name)}"
+        style="width:34px;height:34px;border-radius:50%;border:none;background:none;
+               color:var(--mu);cursor:pointer;display:flex;align-items:center;justify-content:center;
+               flex-shrink:0;transition:color .15s,background .15s"
+        onmouseenter="this.style.color=this.style.background='rgba(168,199,250,.15)'"
+        onmouseleave="this.style.color='var(--mu)';this.style.background='none'">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </button>
       ${s.builtin?`<div class="src-badge">Built-in</div>`:
-        `<button onclick="removeSource('${sanitizeId(s.id)}',event)" style="background:none;border:none;color:#555;cursor:pointer;font-size:20px;padding:4px 6px;border-radius:50%;transition:color .15s" onmouseenter="this.style.color='#ff6b6b'" onmouseleave="this.style.color='#555'">×</button>`}
+        `<button onclick="removeSource('${sanitizeId(s.id)}',event)"
+          style="width:34px;height:34px;border-radius:50%;border:none;background:none;
+                 color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center;
+                 flex-shrink:0;font-size:18px;line-height:1;transition:color .15s"
+          onmouseenter="this.style.color='#f87171'" onmouseleave="this.style.color='#555'">×</button>`}
     </div>`).join('');
   html+=`<div class="src-add-row" onclick="openSourceModal()"><div style="width:40px;height:40px;border-radius:10px;border:1px dashed currentColor;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">+</div><div style="font-size:14px">Add source…</div></div>`;
   html+='</div>';
@@ -1991,14 +2189,15 @@ async function openSource(sourceId){
   const source=allSrc().find(s=>s.id===sourceId);
   if(!source)return;
   B.sourceId=sourceId;B.lang='en';B.tab='popular';B.items=[];B.page=1;B.view='home';B.searchQuery='';
-  document.getElementById('browse-src-name').textContent=source.name;
   document.getElementById('browse-src-icon').textContent=source.icon||'📖';
-  document.getElementById('search-inp').value='';
+  // Update search placeholder with source name
+  const inp=document.getElementById('search-inp');
+  if(inp) inp.placeholder='Search '+source.name+'…';
+  inp.value='';
   document.getElementById('search-clear').style.display='none';
   document.getElementById('browse-home').style.display='none';
   document.getElementById('browse-detail').style.display='flex';
   document.getElementById('manga-detail').style.display='none';
-  // reader closed via classList
   showBrowseSpinner();
   try{await loadSource(source);await browseLoadHome(true);}catch(e){showBrowseError(e.message);}
 }
@@ -2992,7 +3191,18 @@ function showBrowseSpinner(msg=''){
   document.getElementById('browse-content').innerHTML=skeletonGrid(12)+(msg?`<div style="text-align:center;padding:8px;font-size:12px;color:var(--mu)">${msg}</div>`:'');
 }
 function showBrowseError(msg){
-  document.getElementById('browse-content').innerHTML=`<div class="spw"><div style="font-size:28px">⚠</div><div class="sp-msg" style="color:#ff8a8a">${msg}</div></div>`;
+  // Detect CORS/fetch failures and give actionable advice
+  const isCors = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS');
+  const isFile = location.protocol === 'file:';
+  let extra = '';
+  if(isCors && isFile){
+    extra = `<div style="margin-top:12px;padding:12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:10px;font-size:12px;line-height:1.6;text-align:left">
+      <strong style="color:#fbbf24">⚠ CORS error on file://</strong><br>
+      You're opening the app as a local file. Browsers block cross-origin requests from <code>file://</code>.<br><br>
+      <strong style="color:var(--tx)">Fix:</strong> Upload to GitHub Pages and open via <code>https://</code> — CORS will work normally.
+    </div>`;
+  }
+  document.getElementById('browse-content').innerHTML=`<div class="spw"><div style="font-size:28px">⚠</div><div class="sp-msg" style="color:#ff8a8a">${esc(msg)}</div>${extra}</div>`;
 }
 
 // ── OPEN FROM LIBRARY ──
@@ -3011,24 +3221,191 @@ async function openFromLibrary(sourceId,mangaId){
 }
 
 // ═══════════════════════════════ SOURCES ═══════════════════════════════
-function openSourceModal(){document.getElementById('ov-source').classList.add('open');}
-function closeSourceModal(){document.getElementById('ov-source').classList.remove('open');['f-name','f-file','f-icon'].forEach(id=>document.getElementById(id).value='');}
-function confirmAddSource(){
-  const name=document.getElementById('f-name').value.trim();
-  let file=document.getElementById('f-file').value.trim();
-  const icon=document.getElementById('f-icon').value.trim()||'📖';
-  if(!name||!file){showToast('Fill all fields',true);return;}
-  if(!file.endsWith('.html'))file+='.html';
-  // SECURITY: block path traversal and absolute URLs
-  if(/\.\.|^\/|^https?:\/\/|^\/\//i.test(file)){
-    showToast('Invalid path: no ../ or absolute URLs allowed',true);return;
+let _srcModalTab = 'file';
+
+function openSourceModal(){
+  document.getElementById('ov-source').classList.add('open');
+  srcModalTab('file');
+}
+function closeSourceModal(){
+  document.getElementById('ov-source').classList.remove('open');
+  ['f-name','f-file','f-icon'].forEach(id=>document.getElementById(id).value='');
+  const code=document.getElementById('f-code'); if(code) code.value='';
+  clearAllFldErrs();
+}
+function srcModalTab(t){
+  _srcModalTab=t;
+  document.getElementById('smtab-file').classList.toggle('on',t==='file');
+  document.getElementById('smtab-paste').classList.toggle('on',t==='paste');
+  document.getElementById('spanel-file').classList.toggle('on',t==='file');
+  document.getElementById('spanel-paste').classList.toggle('on',t==='paste');
+  document.getElementById('src-btn-label').textContent = t==='paste'?'Validate & Add':'Add';
+}
+
+// ── Error helpers ──
+function showFldErr(id, msg){
+  const inp=document.getElementById(id);
+  const err=document.getElementById('err-'+id);
+  if(inp) inp.classList.add('err');
+  if(err){ err.textContent=msg; err.classList.add('show'); }
+}
+function clearFldErr(id){
+  const inp=document.getElementById(id);
+  const err=document.getElementById('err-'+id);
+  if(inp) inp.classList.remove('err');
+  if(err){ err.textContent=''; err.classList.remove('show'); }
+}
+function showGlobalErr(msg){
+  const el=document.getElementById('err-global');
+  if(el){ el.textContent='⚠ '+msg; el.classList.add('show'); }
+}
+function clearAllFldErrs(){
+  document.querySelectorAll('#ov-source .fld-err').forEach(e=>{e.textContent='';e.classList.remove('show');});
+  document.querySelectorAll('#ov-source .inp,.code-inp').forEach(e=>e.classList.remove('err'));
+}
+
+// ── Validate source code ──
+function validateSourceCode(code){
+  const errors=[];
+  // Must have window.__SOURCE__
+  if(!/__SOURCE__\s*=/.test(code))
+    errors.push('Missing window.__SOURCE__ assignment');
+  // Must have MANIFEST
+  if(!/MANIFEST/.test(code))
+    errors.push('MANIFEST is missing');
+  // Must have at least getPopular or search
+  if(!/getPopular|search/.test(code))
+    errors.push('Must implement at least getPopular() or search()');
+  // Check for dangerous patterns
+  if(/document\.|window\.location|localStorage|eval\(/.test(code))
+    errors.push('Code contains restricted APIs (document, location, localStorage, eval)');
+  return errors;
+}
+
+async function confirmAddSource(){
+  clearAllFldErrs();
+  const name = document.getElementById('f-name').value.trim();
+  const icon = document.getElementById('f-icon').value.trim() || '📖';
+  let hasErr = false;
+
+  // Validate name
+  if(!name){
+    showFldErr('f-name','Name is required');
+    hasErr=true;
+  } else if(name.length < 2){
+    showFldErr('f-name','Name must be at least 2 characters');
+    hasErr=true;
   }
-  // Only allow safe filename characters
-  if(!/^[a-zA-Z0-9_\-./]+\.html$/.test(file)){
-    showToast('Filename contains invalid characters',true);return;
+
+  if(_srcModalTab === 'file'){
+    // ── FILE MODE ──
+    let file = document.getElementById('f-file').value.trim();
+    if(!file){
+      showFldErr('f-file','Filename is required');
+      hasErr=true;
+    } else {
+      if(!file.endsWith('.html')) file+='.html';
+      if(/\.\.|^\/|^https?:\/\/|^\/\//i.test(file)){
+        showFldErr('f-file','No ../ or absolute URLs — filename only (e.g. mysource.html)');
+        hasErr=true;
+      } else if(!/^[a-zA-Z0-9_\-./]+\.html$/.test(file)){
+        showFldErr('f-file','Only letters, numbers, hyphens, underscores allowed');
+        hasErr=true;
+      } else {
+        // Check for duplicate filename
+        if(allSrc().find(s=>s.file===file)){
+          showFldErr('f-file','A source with this filename already exists');
+          hasErr=true;
+        }
+      }
+      if(!hasErr){
+        if(hasErr) return;
+        // Try loading to validate it actually works
+        const btn=document.querySelector('#ov-source .btn-ok');
+        const lbl=document.getElementById('src-btn-label');
+        if(btn) btn.disabled=true;
+        if(lbl) lbl.textContent='Checking…';
+        try{
+          const testSrc={id:'_test',name,file,icon,builtin:false,langs:'?'};
+          await loadSource(testSrc);
+          // Remove test from cache
+          delete loadedSources['_test'];
+        }catch(e){
+          showGlobalErr(e.message);
+          if(btn) btn.disabled=false;
+          if(lbl) lbl.textContent='Add';
+          return;
+        }
+        if(btn) btn.disabled=false;
+        if(lbl) lbl.textContent='Add';
+        const c=S.getSrc();
+        c.push({id:'c_'+Date.now(),name:sanitizeText(name),file,icon,builtin:false,langs:'?'});
+        S.saveSrc(c);closeSourceModal();renderBrowseHome();showToast('✓ '+sanitizeText(name)+' added');
+        return;
+      }
+    }
+
+  } else {
+    // ── PASTE MODE ──
+    const code = document.getElementById('f-code').value.trim();
+    if(!code){
+      showFldErr('f-code','Paste your source code here');
+      hasErr=true;
+    } else {
+      // Static validation
+      const errs = validateSourceCode(code);
+      if(errs.length){
+        showFldErr('f-code', errs[0]);
+        if(errs.length>1) showGlobalErr(errs.slice(1).join(' · '));
+        hasErr=true;
+      }
+    }
+    if(!hasErr){
+      // Try running the code in sandbox
+      const fakeWin={
+        fetch,encodeURIComponent,decodeURIComponent,JSON,Math,Date,
+        parseInt,parseFloat,isNaN,isFinite,String,Number,Boolean,
+        Array,Object,Promise,setTimeout,clearTimeout,
+        console:{log:()=>{},warn:()=>{},error:()=>{}}
+      };
+      try{
+        // Wrap in script tag so loadSource parser can extract it
+        const wrappedCode = code;
+        new Function('window', wrappedCode)(fakeWin);
+      }catch(e){
+        showFldErr('f-code','Syntax error: '+e.message);
+        return;
+      }
+      if(!fakeWin.__SOURCE__){
+        showFldErr('f-code','Code ran but window.__SOURCE__ was not set');
+        return;
+      }
+      if(!fakeWin.__SOURCE__.MANIFEST?.id){
+        showFldErr('f-code','MANIFEST must have an id field');
+        return;
+      }
+      // Save as inline source (no file needed)
+      const id='paste_'+Date.now();
+      const manifestName=fakeWin.__SOURCE__.MANIFEST?.name||name;
+      const manifestLangs=fakeWin.__SOURCE__.MANIFEST?.langs||['?'];
+      // Store the raw code in a blob-like localStorage entry
+      localStorage.setItem('mhub_src_code_'+id, code);
+      const c=S.getSrc();
+      c.push({
+        id,
+        name:sanitizeText(name||manifestName),
+        file:'__inline__'+id,
+        icon:fakeWin.__SOURCE__.MANIFEST?.icon||icon,
+        builtin:false,
+        langs:Array.isArray(manifestLangs)?manifestLangs.join(','):manifestLangs,
+        inline:true
+      });
+      S.saveSrc(c);
+      closeSourceModal();
+      renderBrowseHome();
+      showToast('✓ '+sanitizeText(name||manifestName)+' added');
+    }
   }
-  const c=S.getSrc();c.push({id:'c_'+Date.now(),name:sanitizeText(name),file,icon,builtin:false,langs:'?'});
-  S.saveSrc(c);closeSourceModal();renderBrowseHome();showToast('✓ '+name+' added');
 }
 function removeSource(id,e){e.stopPropagation();if(!confirm('Remove this source?'))return;S.saveSrc(S.getSrc().filter(s=>s.id!==id));renderBrowseHome();showToast('Source removed');}
 
@@ -3765,6 +4142,283 @@ function preloadNextPages(currentIdx, ahead=3){
 // ══════════════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  BUILT-IN BROWSER — Cloudflare bypass / cookie injector
+// ══════════════════════════════════════════════════════════════
+function openBrowserPage(url, activeSrcId){
+  const el = document.getElementById('page-browser');
+  el.style.display = 'flex';
+  // Push a history state so the Android/browser back button closes this overlay
+  history.pushState({browserPage:true}, '');
+  const bar = document.getElementById('br-src-bar');
+  const sources = allSrc();
+  if(sources.length){
+    bar.innerHTML = sources.map(s => {
+      const isActive = s.id === activeSrcId;
+      return `<button onclick="openBrowserForSourceId('${sanitizeId(s.id)}')"
+        style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+               padding:5px 10px;border-radius:8px;
+               background:${isActive?'rgba(168,199,250,.15)':'var(--sf2)'};
+               border:1px solid ${isActive?'var(--ac)':'var(--bd)'};
+               color:${isActive?'var(--ac)':'var(--tx)'};
+               font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0">
+        ${s.icon||'📖'} ${esc(s.name)}
+      </button>`;
+    }).join('');
+  } else {
+    bar.innerHTML = '<span style="font-size:11px;color:var(--mu);padding:4px">No sources added yet</span>';
+  }
+  const urlInp = document.getElementById('br-url-inp');
+  if(url && urlInp) urlInp.value = url;
+  if(url) brOpen(url);
+}
+function closeBrowserPage(){
+  document.getElementById('page-browser').style.display='none';
+  Object.keys(loadedSources).forEach(k=>delete loadedSources[k]);
+  showToast('✓ Sources reloaded — cookies applied');
+  // If we pushed a state, pop it (avoid double-pop)
+  if(history.state && history.state.browserPage) history.back();
+}
+
+// Extract the BASE url from a source (tries inline code then file)
+// Strip API subdomains to get the browseable home URL
+// e.g. https://api.mangadex.org → https://mangadex.org
+// e.g. https://uploads.site.com → https://site.com
+function _normalizeSourceUrl(url){
+  if(!url) return url;
+  try{
+    const u = new URL(url);
+    const parts = u.hostname.split('.');
+    // If subdomain like api.X.com or uploads.X.com → use X.com
+    const skipSubs = ['api','uploads','cdn','img','images','static','media','assets'];
+    if(parts.length > 2 && skipSubs.includes(parts[0])){
+      u.hostname = parts.slice(1).join('.');
+      u.pathname = '/';
+      u.search = '';
+      return u.toString();
+    }
+    return url;
+  }catch(e){ return url; }
+}
+
+async function _getSrcUrl(srcId){
+  const src = allSrc().find(s=>s.id===srcId);
+  if(!src) return null;
+
+  // 1. Check if MANIFEST has a url field (source can declare it)
+  try{
+    const loaded = loadedSources[srcId];
+    if(loaded && loaded.MANIFEST && loaded.MANIFEST.url) return loaded.MANIFEST.url;
+  }catch(e){}
+
+  // 2. Check inline stored code
+  const stored = localStorage.getItem('mhub_src_code_'+srcId)||'';
+  if(stored){
+    const m = stored.match(/const\s+(?:BASE|baseUrl|BASE_URL)\s*=\s*['"]([^'"]+)['"]/);
+    if(m) return m[1];
+    // Also check MANIFEST url in stored code
+    const mu = stored.match(/url\s*:\s*['"]([^'"]+)['"]/);
+    if(mu && /^https?:\/\//.test(mu[1])) return mu[1];
+  }
+
+  // 3. Try fetching source file (only works on https://, not file://)
+  if(src.file && !src.inline && location.protocol !== 'file:'){
+    try{
+      const txt = await window.fetch(src.file,{credentials:'omit'}).then(r=>r.text());
+      const m = txt.match(/const\s+(?:BASE|baseUrl|BASE_URL|API)\s*=\s*['"]([^'"]+)['"]/);
+      if(m) return _normalizeSourceUrl(m[1]);
+    }catch(e){}
+  }
+
+  // 4. Try from stored code with URL normalization
+  if(stored){
+    const m = stored.match(/const\s+(?:BASE|baseUrl|BASE_URL|API)\s*=\s*['"]([^'"]+)['"]/);
+    if(m) return _normalizeSourceUrl(m[1]);
+  }
+
+  // 5. Fallback: ask user — show source name so they know what to open
+  return null;
+}
+
+async function openBrowserForSourceId(srcId){
+  const src = allSrc().find(s=>s.id===srcId);
+  const url = await _getSrcUrl(srcId);
+
+  if(!url){
+    // Can't auto-detect — open browser page empty so user can type manually
+    openBrowserPage(null, srcId);
+    // Show hint with source name
+    const lbl = document.getElementById('br-last-opened');
+    if(lbl && src) lbl.textContent = 'Enter the home URL for "'+src.name+'" manually above';
+    const inp = document.getElementById('br-url-inp');
+    if(inp){ inp.value=''; inp.placeholder='Enter URL for '+( src?.name||'this source')+'…'; inp.focus(); }
+    return;
+  }
+  openBrowserPage(url, srcId);
+}
+
+async function openBrowserForSource(){
+  if(!B.sourceId) return;
+  await openBrowserForSourceId(B.sourceId);
+}
+
+function brNavigateSrc(srcId){
+  openBrowserForSourceId(srcId);
+}
+
+// ── Intent URL parser ──
+// Android intent:// URLs encode a fallback https:// URL.
+// Format: intent://HOST/PATH?QUERY#Intent;scheme=SCHEME;package=PKG;S.browser_fallback_url=URL;end
+function parseIntentUrl(url){
+  if(!url.startsWith('intent://')) return null;
+  try{
+    // 1. Try explicit browser_fallback_url parameter
+    const fallbackMatch = url.match(/[S]\.browser_fallback_url=([^;]+)/);
+    if(fallbackMatch) return decodeURIComponent(fallbackMatch[1]);
+
+    // 2. Reconstruct from intent parts
+    const fragment = url.split('#')[1]||'';
+    const schemeMatch = fragment.match(/\bscheme=(\w+)/);
+    const scheme = schemeMatch ? schemeMatch[1] : 'https';
+    // Strip "intent://" prefix and fragment
+    const rest = url.replace(/^intent:\/\//,'').split('#')[0];
+    return scheme + '://' + rest;
+  }catch(e){ return null; }
+}
+
+// ── Pre-flight redirect check (best-effort, CORS-limited) ──
+async function resolveUrl(url){
+  // If already an intent URL, parse it
+  if(url.startsWith('intent://')) return parseIntentUrl(url)||url;
+  try{
+    // Use HEAD request to follow redirects and detect intent:// redirects
+    // This only works if CORS allows it — fails silently otherwise
+    const r = await fetch(url, {method:'HEAD', redirect:'follow', credentials:'omit'});
+    const final = r.url||url;
+    if(final.startsWith('intent://')) return parseIntentUrl(final)||url;
+    return final;
+  }catch(e){
+    return url; // CORS blocked — open as-is
+  }
+}
+
+let _brCurrentUrl='';
+
+async function brOpen(rawUrl){
+  let url=(rawUrl||'').trim();
+  if(!url) return;
+  if(url.startsWith('intent://')){
+    const converted = parseIntentUrl(url);
+    if(!converted){ showToast('Cannot parse intent URL',true); return; }
+    url = converted;
+    showToast('✓ Converted intent:// → https://');
+  }
+  if(!url.startsWith('http')) url='https://'+url;
+  _brCurrentUrl = url;
+  document.getElementById('br-url-inp').value = url;
+  const lbl = document.getElementById('br-last-opened');
+  if(lbl) lbl.textContent = 'Ready → tap "Open in new tab"';
+  // Update URL bar status
+  const lbl2 = document.getElementById('br-last-opened');
+  if(lbl2) lbl2.textContent = 'Ready → tap Open ↗';
+}
+
+function brOpenTab(){
+  if(!_brCurrentUrl) return;
+  // window.open is blocked in file:// context — use <a> click instead
+  const a = document.createElement('a');
+  a.href = _brCurrentUrl;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ── Intercept paste in BOTH url bar and intent textarea ──
+// Catches intent:// before the browser tries to navigate
+function _handleIntentPaste(e, autoOpen){
+  const pasted = (e.clipboardData||window.clipboardData)?.getData('text')||'';
+  if(!pasted.trim()) return;
+  if(pasted.trim().startsWith('intent://')){
+    e.preventDefault();
+    const converted = parseIntentUrl(pasted.trim());
+    if(!converted){ showToast('Cannot parse intent:// URL',true); return; }
+    // Show converted URL in both bars
+    const urlInp = document.getElementById('br-url-inp');
+    if(urlInp) urlInp.value = converted;
+    const intentInp = document.getElementById('br-intent-inp');
+    if(intentInp) intentInp.value = '';
+    const prev = document.getElementById('br-intent-preview');
+    if(prev) prev.style.display='none';
+    const lbl = document.getElementById('br-last-opened');
+    if(lbl) lbl.textContent = '→ ' + converted;
+    // Flash green
+    if(urlInp){ urlInp.style.color='#4ade80'; setTimeout(()=>urlInp.style.color='',1800); }
+    showToast('✓ Converted intent → https://  (tap Open ↗ to launch)');
+    if(autoOpen) brOpen(converted);
+  }
+}
+
+// URL bar: intercept paste, convert intent://, but DON'T auto-open (let user confirm)
+document.getElementById('br-url-inp')?.addEventListener('paste', e => _handleIntentPaste(e, false));
+
+// Intent textarea: intercept paste and auto-open immediately
+document.getElementById('br-intent-inp')?.addEventListener('paste', e => _handleIntentPaste(e, true));
+
+function brNavigate(url){ brOpen(url); }
+function brRefresh(){}
+function brBack(){}
+function brForward(){}
+function brUpdateNav(){}
+function brSetStatus(msg){
+  const el=document.getElementById('br-last-opened');
+  if(el) el.textContent=msg;
+}
+function brClearCookies(){
+  showToast('To clear cookies: browser Settings \u2192 Privacy \u2192 Clear browsing data');
+}
+function brIntentPreview(val){
+  const el=document.getElementById('br-intent-preview');
+  if(!el) return;
+  if(!val.trim()){ el.style.display='none'; return; }
+  const converted=parseIntentUrl(val.trim());
+  if(converted){ el.textContent='\u2192 '+converted; el.style.display='block'; }
+  else el.style.display='none';
+}
+function brConvertIntent(){
+  const inp=document.getElementById('br-intent-inp');
+  if(!inp) return;
+  const val=inp.value.trim();
+  if(!val){ showToast('Paste an intent:// URL first',true); return; }
+  let url=val;
+  if(url.startsWith('intent://')){
+    const converted=parseIntentUrl(url);
+    if(!converted){ showToast('Could not parse this intent:// URL',true); return; }
+    url=converted;
+    showToast('\u2713 Converted \u2192 '+url.slice(0,50)+'...');
+  }
+  inp.value='';
+  const prev=document.getElementById('br-intent-preview');
+  if(prev) prev.style.display='none';
+  const urlInp=document.getElementById('br-url-inp');
+  if(urlInp) urlInp.value=url;
+  brOpen(url);
+}
+
+
+// Handle Android/browser back button for overlays
+window.addEventListener('popstate', e => {
+  // If browser page is open, close it (don't navigate away)
+  const bp = document.getElementById('page-browser');
+  if(bp && bp.style.display !== 'none'){
+    document.getElementById('page-browser').style.display='none';
+    Object.keys(loadedSources).forEach(k=>delete loadedSources[k]);
+    showToast('✓ Sources reloaded');
+    return;
+  }
+});
+
 // ═══════════════════════════════ INIT ═══════════════════════════════
 renderLibrary();
 updateNavBadge();
