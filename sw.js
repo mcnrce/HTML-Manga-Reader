@@ -27,7 +27,26 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   // Skip non-GET and cross-origin requests
   if (e.request.method !== 'GET') return;
-  if (!e.request.url.startsWith(self.location.origin)) return;
+
+  const url = e.request.url;
+
+  // ── Intercept intent:// URLs and redirect to https:// fallback ──
+  if (url.startsWith('intent://')) {
+    const fallbackMatch = url.match(/S\.browser_fallback_url=([^;]+)/);
+    if (fallbackMatch) {
+      const fallback = decodeURIComponent(fallbackMatch[1]);
+      e.respondWith(Response.redirect(fallback, 302));
+      return;
+    }
+    // Reconstruct from intent parts
+    const schemeMatch = url.split('#')[1]?.match(/\bscheme=(\w+)/);
+    const scheme = schemeMatch ? schemeMatch[1] : 'https';
+    const rest = url.replace(/^intent:\/\//, '').split('#')[0];
+    e.respondWith(Response.redirect(scheme + '://' + rest, 302));
+    return;
+  }
+
+  if (!url.startsWith(self.location.origin)) return;
 
   e.respondWith(
     fetch(e.request)
