@@ -1,0 +1,3784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>HTML Manga Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0d;--sf:#1a1a1a;--sf2:#242424;--sf3:#2e2e2e;
+  --bd:#2a2a2a;--ac:#a8c7fa;--ac-dark:#1a73e8;--tx:#e8eaed;
+  --mu:#9aa0a6;--r:12px;--nav-h:80px;
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Roboto',sans-serif;overflow:hidden;margin:0;padding:0}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:99px}
+
+/* ── APP SHELL ── */
+.app{
+  display:flex;flex-direction:column;
+  height:100vh;height:100dvh;
+  max-width:500px;margin:0 auto;
+  overflow:hidden;
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  display:flex;align-items:center;padding:12px 8px 8px;
+  min-height:56px;flex-shrink:0;position:relative;z-index:10;
+}
+.topbar-title{font-size:22px;font-weight:500;flex:1;padding:0 8px;letter-spacing:.2px}
+.topbar-actions{display:flex;gap:2px}
+.ic-btn{
+  width:40px;height:40px;border-radius:50%;background:none;border:none;
+  color:var(--tx);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.ic-btn:hover{background:rgba(255,255,255,.08)}
+.ic-btn:active{background:rgba(255,255,255,.12)}
+
+/* ── CATEGORY TABS ── */
+.cat-tabs-row{
+  display:flex;border-bottom:1px solid var(--bd);
+  flex-shrink:0;overflow-x:auto;scrollbar-width:none;
+}
+.cat-tabs-row::-webkit-scrollbar{display:none}
+.ctab{
+  padding:0 16px;height:48px;display:flex;align-items:center;
+  font-size:14px;font-weight:500;color:var(--mu);cursor:pointer;
+  border:none;background:none;font-family:inherit;white-space:nowrap;
+  position:relative;transition:color .2s;flex-shrink:0;
+}
+.ctab.on{color:var(--ac)}
+.ctab.on::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:var(--ac);border-radius:3px 3px 0 0;
+}
+
+/* ── PAGE CONTENT ── */
+.page-wrap{flex:1;overflow-y:auto;overflow-x:hidden;position:relative}
+.page{display:none;flex-direction:column;min-height:100%}
+.page.on{display:flex}
+
+/* ── EMPTY STATE ── */
+.empty-state{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;padding:40px 24px;text-align:center;
+}
+.empty-face{font-size:48px;font-weight:300;color:#555;letter-spacing:2px;font-family:monospace}
+.empty-label{font-size:15px;color:#555;font-weight:400}
+.empty-sub{font-size:13px;color:#3d3d3d;max-width:220px;line-height:1.6}
+
+/* ── LIBRARY ── */
+.lib-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+  gap:10px;padding:12px;
+}
+.lib-item{border-radius:8px;overflow:hidden;cursor:pointer;background:var(--sf2);transition:transform .15s;position:relative}
+.lib-item:active{transform:scale(.96)}
+.lib-cover{width:100%;aspect-ratio:2/3;object-fit:cover;background:var(--sf3);display:block}
+.lib-cover-empty{width:100%;aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--sf3)}
+.lib-title{font-size:11px;padding:5px 6px 6px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* unread badge */
+.lib-badge{position:absolute;top:4px;left:4px;min-width:22px;height:22px;border-radius:99px;background:var(--ac);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+/* sort/filter sheet */
+.lib-sheet{position:fixed;inset:0;z-index:700;display:none}
+.lib-sheet.open{display:flex;flex-direction:column;justify-content:flex-end}
+.lib-sheet-ov{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.lib-sheet-body{position:relative;background:#1e1e1e;border-radius:20px 20px 0 0;z-index:1;padding-bottom:env(safe-area-inset-bottom,16px)}
+.lib-sheet-drag{width:36px;height:4px;background:#444;border-radius:99px;margin:12px auto 0}
+/* tab bar inside sheet */
+.lib-sheet-tabs{display:flex;border-bottom:1px solid var(--bd);margin:8px 0 0}
+.lib-stab{flex:1;padding:10px 0;text-align:center;font-size:14px;font-weight:500;color:var(--mu);cursor:pointer;border:none;background:none;font-family:inherit;position:relative;transition:color .2s}
+.lib-stab.on{color:var(--ac)}
+.lib-stab.on::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--ac);border-radius:2px 2px 0 0}
+/* sheet panels */
+.lib-sheet-panel{display:none;padding:8px 0 12px;max-height:60vh;overflow-y:auto}
+.lib-sheet-panel.on{display:block}
+.lib-sort-item{display:flex;align-items:center;gap:12px;padding:13px 20px;cursor:pointer;transition:background .15s}
+.lib-sort-item:active{background:rgba(255,255,255,.06)}
+.lib-sort-item .arrow{color:var(--ac);font-size:18px;flex-shrink:0;width:20px}
+.lib-sort-label{font-size:14px;flex:1}
+/* display options */
+.lib-disp-row{display:flex;align-items:center;padding:12px 20px;gap:12px}
+.lib-disp-label{font-size:14px;flex:1}
+.lib-disp-btns{display:flex;gap:6px}
+.lib-disp-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--sf3);color:var(--mu);font-family:inherit;font-size:12px;cursor:pointer;transition:all .15s}
+.lib-disp-btn.on{border-color:var(--ac);background:rgba(168,199,250,.1);color:var(--ac)}
+
+/* ── UPDATES ── */
+.update-item{
+  display:flex;align-items:center;gap:12px;padding:10px 16px;
+  border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;
+  transition:background .15s;
+}
+.update-item:active{background:rgba(255,255,255,.05)}
+.update-thumb{width:40px;height:56px;border-radius:6px;object-fit:cover;background:var(--sf2);flex-shrink:0}
+.update-info{flex:1;min-width:0}
+.update-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.update-ch{font-size:12px;color:var(--mu);margin-top:2px}
+.update-time{font-size:11px;color:#555;flex-shrink:0}
+
+/* ── HISTORY ── */
+.hist-date{
+  padding:12px 16px 4px;font-size:12px;font-weight:500;color:var(--mu);
+  text-transform:uppercase;letter-spacing:.8px;
+}
+.hist-item{
+  display:flex;align-items:center;gap:12px;padding:10px 16px;
+  cursor:pointer;transition:background .15s;
+}
+.hist-item:active{background:rgba(255,255,255,.05)}
+.hist-thumb{width:40px;height:56px;border-radius:6px;object-fit:cover;background:var(--sf2);flex-shrink:0}
+.hist-info{flex:1;min-width:0}
+.hist-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-ch{font-size:12px;color:var(--mu);margin-top:2px}
+.hist-time{font-size:11px;color:#555}
+.hist-rm{width:36px;height:36px;border-radius:50%;background:none;border:none;color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s,background .15s;flex-shrink:0}
+.hist-rm:hover{color:var(--tx);background:rgba(255,255,255,.08)}
+
+/* ── BROWSE ── */
+.browse-src-hdr{padding:16px 16px 4px;font-size:12px;font-weight:500;color:var(--mu);text-transform:uppercase;letter-spacing:.8px}
+.src-list{padding:0 8px 12px}
+.src-row{
+  display:flex;align-items:center;gap:12px;padding:10px 8px;
+  border-radius:10px;cursor:pointer;transition:background .15s;
+}
+.src-row:active{background:rgba(255,255,255,.07)}
+.src-ico{width:40px;height:40px;border-radius:10px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:1px solid var(--bd)}
+.src-info{flex:1;min-width:0}
+.src-name{font-size:14px;font-weight:500}
+.src-lang{font-size:12px;color:var(--mu);margin-top:1px}
+.src-badge{font-size:11px;padding:2px 9px;border-radius:99px;background:rgba(168,199,250,.1);color:var(--ac);border:1px solid rgba(168,199,250,.2);flex-shrink:0}
+.src-add-row{
+  display:flex;align-items:center;gap:12px;padding:10px 8px;
+  border-radius:10px;cursor:pointer;border:1px dashed var(--bd);margin:4px 8px;
+  transition:border-color .15s,background .15s;color:var(--mu);
+}
+.src-add-row:active{background:rgba(255,255,255,.05)}
+.src-add-row:hover{border-color:var(--ac);color:var(--ac)}
+
+/* ── BROWSE DETAIL ── */
+.browse-topbar{display:flex;align-items:center;gap:6px;padding:6px 4px;flex-shrink:0;border-bottom:1px solid var(--bd)}
+.browse-tabs-bar{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
+.brtab{padding:0 16px;height:44px;display:flex;align-items:center;font-size:14px;font-weight:500;color:var(--mu);cursor:pointer;border:none;background:none;font-family:inherit;position:relative;transition:color .2s}
+.brtab.on{color:var(--ac)}.brtab.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--ac);border-radius:2px 2px 0 0}
+.search-bar{
+  margin:8px 12px;display:flex;align-items:center;gap:8px;
+  background:var(--sf2);border-radius:28px;padding:0 14px;height:40px;
+  border:1px solid var(--bd);transition:border-color .2s;flex-shrink:0;
+}
+.search-bar:focus-within{border-color:var(--ac)}
+.search-bar input{background:none;border:none;outline:none;color:var(--tx);font-size:14px;font-family:inherit;flex:1}
+.search-bar input::placeholder{color:#555}
+
+/* MANGA GRID */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:8px;padding:8px 12px 16px}
+.mc{border-radius:8px;overflow:hidden;cursor:pointer;background:var(--sf2);transition:transform .15s}
+.mc:active{transform:scale(.96)}
+.mc-img{width:100%;aspect-ratio:2/3;position:relative;overflow:hidden}
+.mc-img img{width:100%;height:100%;object-fit:cover;display:block}
+.mc-nimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:30px}
+.mc-status{position:absolute;top:4px;left:4px;background:rgba(0,0,0,.75);border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.mc-status.ongoing{color:#4ade80}.mc-status.completed{color:var(--ac)}
+.mc-title{font-size:11px;padding:5px 6px 7px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* DETAIL */
+.det-wrap{padding:12px 16px 100px}
+.back-row{display:flex;align-items:center;gap:4px;margin-bottom:16px;cursor:pointer}
+.back-row:active{opacity:.7}
+.det-hero{display:flex;gap:16px;margin-bottom:18px}
+.det-cover{width:120px;flex-shrink:0;border-radius:10px;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.6);background:var(--sf2)}
+.det-cover img{width:100%;display:block}
+.det-title{font-size:18px;font-weight:700;line-height:1.2;margin-bottom:8px}
+.det-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.det-badge{font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid var(--bd);color:var(--mu)}
+.det-badge.ongoing{border-color:#4ade8044;color:#4ade80;background:#4ade8010}
+.det-badge.completed{border-color:rgba(168,199,250,.3);color:var(--ac);background:rgba(168,199,250,.08)}
+.det-meta{font-size:12px;color:var(--mu);margin-bottom:8px;line-height:1.7}
+.det-meta b{color:var(--tx);font-weight:500}
+.det-desc{font-size:13px;color:#9aa0a6;line-height:1.7;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.det-desc.open{-webkit-line-clamp:unset}
+.det-desc-btn{background:none;border:none;color:var(--ac);font-size:12px;cursor:pointer;font-family:inherit;margin-top:4px;padding:0}
+.det-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.det-action{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:background .15s}
+.det-action.fill{background:var(--ac);color:#000}.det-action.fill:active{background:#8ab4f8}
+.det-action.outline{background:transparent;border:1px solid var(--bd);color:var(--tx)}.det-action.outline:active{background:rgba(255,255,255,.07)}
+.ch-hdr{font-size:16px;font-weight:500;margin:20px 0 8px;padding-bottom:10px;border-bottom:1px solid var(--bd)}
+.ch-item{display:flex;align-items:center;cursor:pointer;gap:10px;transition:background .15s;border-radius:6px;padding:10px 6px;position:relative}
+.ch-item:active{background:rgba(255,255,255,.05)}
+.ch-item.read .ch-num,.ch-item.read .ch-info *{color:#555!important;opacity:.6}
+.ch-item.selected{background:rgba(168,199,250,.1);}
+.ch-item.selected::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ac);border-radius:3px}
+.ch-num{font-size:13px;font-weight:500;min-width:56px}
+.ch-info{flex:1;min-width:0}
+.ch-sub{font-size:11px;color:var(--mu);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-date{font-size:11px;color:#555;flex-shrink:0}
+.ch-dl{width:32px;height:32px;border-radius:50%;background:none;border:none;color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s,background .15s;flex-shrink:0}
+.ch-dl:hover{color:var(--ac);background:rgba(168,199,250,.1)}
+/* selection checkbox */
+.ch-sel{width:22px;height:22px;border-radius:50%;border:2px solid #555;display:none;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.ch-item.selected .ch-sel{border-color:var(--ac);background:var(--ac)}
+/* selection topbar */
+.sel-topbar{display:none;align-items:center;gap:6px;padding:6px 4px;background:var(--sf2);border-bottom:1px solid var(--bd);flex-shrink:0}
+.sel-topbar.on{display:flex}
+.sel-count{flex:1;font-size:14px;font-weight:500;padding:0 6px}
+.sel-action-btn{background:none;border:none;color:var(--mu);cursor:pointer;padding:8px 10px;border-radius:8px;font-family:inherit;font-size:12px;transition:color .15s,background .15s;display:flex;align-items:center;gap:5px}
+.sel-action-btn:active{background:rgba(255,255,255,.08);color:var(--tx)}
+/* selection bottom sheet */
+.sel-sheet{position:fixed;inset:0;z-index:600;display:none}
+.sel-sheet.open{display:flex;flex-direction:column;justify-content:flex-end}
+.sel-sheet-ov{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.sel-sheet-body{position:relative;background:#1e1e1e;border-radius:20px 20px 0 0;padding:0 0 env(safe-area-inset-bottom,16px);z-index:1}
+.sel-drag{width:36px;height:4px;background:#444;border-radius:99px;margin:12px auto 8px}
+.sel-item{display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer;transition:background .15s}
+.sel-item:active{background:rgba(255,255,255,.06)}
+.sel-item-ic{width:20px;text-align:center;font-size:18px;flex-shrink:0}
+.sel-item-label{font-size:14px}
+
+/* READER */
+/* ── READER FULL-SCREEN ── */
+#reader-view{
+  position:fixed!important;inset:0!important;z-index:1000;
+  background:#000;display:none;
+  /* overflow hidden so rotated inner doesn't bleed outside */
+  overflow:hidden;
+}
+#reader-view.open{display:block!important;}
+/* Inner wrapper — this is what we rotate */
+#rdr-inner{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+  display:-webkit-flex;display:flex;
+  -webkit-flex-direction:column;flex-direction:column;
+  /* transform-origin center so rotation pivots correctly */
+  -webkit-transform-origin:center center;
+  transform-origin:center center;
+  -webkit-transition:none;transition:none;
+}
+
+/* top bar */
+.rdr-topbar{
+  position:absolute;top:0;left:0;right:0;z-index:30;
+  display:flex;align-items:center;gap:4px;padding:6px 4px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.85),transparent);
+  transition:transform .25s,opacity .25s;
+}
+.rdr-topbar.hidden{transform:translateY(-100%);opacity:0;pointer-events:none}
+.rdr-topbar-title{flex:1;text-align:center}
+.rdr-topbar-title b{font-size:14px;font-weight:500;color:#fff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.rdr-topbar-title small{font-size:11px;color:rgba(255,255,255,.55)}
+
+/* pages scroll area */
+.rdr-scroll{
+  -webkit-flex:1;flex:1;
+  background:#000;overflow:hidden;
+  position:relative;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+.rdr-scroll::-webkit-scrollbar{display:none}
+
+/* ── WEBTOON: vertical free scroll ── */
+.rdr-scroll.mode-webtoon{
+  overflow-y:auto;overflow-x:hidden;
+}
+/* optional snap per-page in webtoon */
+.rdr-scroll.mode-webtoon .rpage-wrap{
+  display:flex;flex-direction:column;align-items:stretch;background:#000;
+}
+.rdr-scroll.mode-webtoon .rpage-wrap.gaps{gap:8px;padding:8px 0;}
+.rdr-scroll.mode-webtoon .rpage{width:100%;}
+.rdr-scroll.mode-webtoon .rpage img{width:100%;display:block;}
+
+/* ── PAGED LTR / RTL: pure JS transform — no native scroll ── */
+.rdr-scroll.mode-ltr,
+.rdr-scroll.mode-rtl{
+  overflow:hidden; /* block ALL native scrolling */
+}
+/* sliding track — moved by translateX in JS */
+.rdr-h-track{
+  display:flex;
+  height:100%;
+  width:100%;
+  will-change:transform;
+  /* transition is applied/removed by JS: on during snap, off during drag */
+}
+/* RTL uses same page order — direction is handled purely by JS */
+
+.rdr-scroll.mode-ltr .rpage,
+.rdr-scroll.mode-rtl .rpage{
+  flex:0 0 100%;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.rdr-scroll.mode-ltr .rpage img,
+.rdr-scroll.mode-rtl .rpage img{
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  display:block;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+/* ── PAGED VERTICAL: vertical scroll-snap ── */
+.rdr-scroll.mode-vertical{
+  overflow-y:auto;overflow-x:hidden;
+  scroll-snap-type:y mandatory;
+  scroll-behavior:smooth;
+}
+.rdr-scroll.mode-vertical .rpage{
+  width:100%;height:100%;
+  scroll-snap-align:start;
+  scroll-snap-stop:always;
+  display:flex;align-items:center;justify-content:center;
+  background:#000;
+}
+.rdr-scroll.mode-vertical .rpage img{
+  max-width:100%;max-height:100%;object-fit:contain;display:block;
+}
+
+/* swipe hint overlay */
+.rdr-swipe-hint{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:rgba(0,0,0,.65);border-radius:99px;
+  padding:8px 20px;font-size:13px;color:#fff;
+  pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;
+  z-index:15;
+}
+.rdr-swipe-hint.show{opacity:1;}
+
+/* tap zones — disabled in webtoon, enabled in paged via JS */
+.rdr-tap-zone{position:absolute;top:0;bottom:0;z-index:10;cursor:pointer;pointer-events:none;}
+#reader-view.paged .rdr-tap-zone{pointer-events:auto;}
+#tap-left{left:0;width:25%}
+#tap-mid{left:25%;width:50%}
+#tap-right{right:0;width:25%}
+
+/* bottom controls */
+.rdr-btm{
+  position:absolute;bottom:0;left:0;right:0;z-index:30;
+  background:linear-gradient(to top,rgba(0,0,0,.92) 70%,transparent);
+  padding:0 0 env(safe-area-inset-bottom,8px);
+  transition:transform .25s,opacity .25s;
+}
+.rdr-btm.hidden{transform:translateY(100%);opacity:0;pointer-events:none}
+
+/* nav row */
+.rdr-nav{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 12px 4px;
+}
+.rdr-ch-btn{
+  width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.1);
+  border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;flex-shrink:0;
+}
+.rdr-ch-btn:active{background:rgba(255,255,255,.2)}
+.rdr-ch-btn:disabled{opacity:.3;pointer-events:none}
+.rdr-slider-wrap{flex:1;display:flex;align-items:center;gap:8px}
+.rdr-pg-num{font-size:13px;font-weight:500;color:#fff;min-width:22px;text-align:center;flex-shrink:0}
+.rdr-slider{
+  flex:1;-webkit-appearance:none;appearance:none;height:3px;
+  background:rgba(255,255,255,.25);border-radius:99px;outline:none;cursor:pointer;
+}
+.rdr-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--ac);cursor:pointer;box-shadow:0 0 4px rgba(0,0,0,.5);
+}
+
+/* actions row */
+.rdr-acts{
+  display:flex;justify-content:space-around;align-items:center;
+  padding:2px 8px 10px;border-top:1px solid rgba(255,255,255,.08);margin-top:4px;
+}
+.rdr-act{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;
+  font-family:inherit;font-size:11px;padding:8px 12px;border-radius:10px;
+  transition:color .15s,background .15s;
+}
+.rdr-act:active{background:rgba(255,255,255,.08)}
+.rdr-act.on{color:var(--ac)}
+
+/* ── Reader Settings Sheet ── */
+.rdr-settings-sheet{
+  position:absolute;bottom:0;left:0;right:0;z-index:50;
+  background:#1a1a1a;border-radius:20px 20px 0 0;
+  transform:translateY(100%);transition:transform .3s;
+  display:flex;flex-direction:column;max-height:90vh;
+}
+.rdr-settings-sheet.open{transform:translateY(0)}
+/* 3-tab header */
+.rdr-stab-bar{display:flex;border-bottom:1px solid #2a2a2a;flex-shrink:0}
+.rdr-stab{flex:1;padding:12px 4px;text-align:center;font-size:13px;font-weight:500;
+  color:#666;border:none;background:none;font-family:inherit;cursor:pointer;
+  position:relative;transition:color .2s}
+.rdr-stab.on{color:var(--ac)}
+.rdr-stab.on::after{content:'';position:absolute;bottom:-1px;left:0;right:0;
+  height:2px;background:var(--ac);border-radius:2px 2px 0 0}
+.rdr-stab-panel{display:none;overflow-y:auto;flex:1;padding-bottom:env(safe-area-inset-bottom,12px)}
+.rdr-stab-panel.on{display:block}
+/* section label */
+.rdr-sec{font-size:12px;color:#666;padding:14px 18px 6px;text-transform:uppercase;letter-spacing:.6px;font-weight:500}
+/* chip group */
+.rdr-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 14px}
+.rdr-chip{padding:8px 14px;border-radius:99px;border:1.5px solid #2e2e2e;
+  background:#222;color:#aaa;font-family:inherit;font-size:13px;cursor:pointer;
+  transition:all .15s;white-space:nowrap}
+.rdr-chip.on{border-color:var(--ac);background:rgba(168,199,250,.1);color:var(--ac)}
+/* checkbox row */
+.rdr-check-row{display:flex;align-items:center;gap:12px;padding:10px 18px;cursor:pointer}
+.rdr-check-row:active{background:rgba(255,255,255,.05)}
+.rdr-checkbox{width:22px;height:22px;border-radius:5px;border:2px solid #444;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.rdr-checkbox.on{background:var(--ac);border-color:var(--ac)}
+.rdr-check-label{font-size:14px;color:#ccc;flex:1}
+/* divider */
+.rdr-div{height:1px;background:#222;margin:4px 0}
+
+/* rotation sheet — same style as mode sheet */
+.rdr-rot-sheet{
+  position:absolute;bottom:0;left:0;right:0;z-index:50;
+  background:#1e1e1e;border-radius:20px 20px 0 0;
+  padding:0 0 env(safe-area-inset-bottom,16px);
+  transform:translateY(100%);transition:transform .3s;
+}
+.rdr-rot-sheet.open{transform:translateY(0)}
+.rdr-rot-title{font-size:16px;font-weight:600;padding:4px 20px 14px}
+.rdr-rot-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 16px}
+.rdr-rot-btn{
+  display:flex;align-items:center;gap:10px;padding:14px;
+  background:var(--sf3);border:1.5px solid transparent;border-radius:12px;
+  cursor:pointer;color:var(--tx);font-family:inherit;font-size:13px;
+  transition:all .15s;
+}
+.rdr-rot-btn:active{opacity:.8}
+.rdr-rot-btn.sel{border-color:var(--ac);background:rgba(168,199,250,.08);color:var(--ac)}
+/* crop: just a CSS filter applied to rdr-scroll images */
+#rdr-scroll.crop-on img{ object-fit:cover; }
+#rdr-scroll.crop-on .rpage{ overflow:hidden; }
+/* landscape fill: images fill the rotated screen width */
+#rdr-inner.land-fill #rdr-scroll .rpage img{ width:100vh!important; max-width:none!important; }
+#rdr-inner.land-fill #rdr-scroll .rpage{ overflow-x:hidden; }
+
+/* reading mode sheet */
+.rdr-mode-sheet{
+  position:absolute;bottom:0;left:0;right:0;z-index:50;
+  background:#1e1e1e;border-radius:20px 20px 0 0;
+  padding:0 0 env(safe-area-inset-bottom,16px);
+  transform:translateY(100%);transition:transform .3s;
+}
+.rdr-mode-sheet.open{transform:translateY(0)}
+.rdr-mode-drag{width:36px;height:4px;background:#444;border-radius:99px;margin:12px auto 16px}
+.rdr-mode-title{font-size:16px;font-weight:600;padding:0 20px 14px}
+.rdr-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 16px}
+.rdr-mode-btn{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:var(--sf3);border:1.5px solid transparent;border-radius:12px;
+  cursor:pointer;transition:all .15s;font-family:inherit;color:var(--tx);
+}
+.rdr-mode-btn.sel{border-color:var(--ac);background:rgba(168,199,250,.08);}
+.rdr-mode-btn:active{opacity:.8}
+.rdr-mode-btn svg{flex-shrink:0;color:var(--mu)}
+.rdr-mode-btn.sel svg{color:var(--ac)}
+.rdr-mode-label{font-size:12px;font-weight:500;text-align:left;line-height:1.3}
+.rdr-mode-apply{
+  margin:0 16px 8px;width:calc(100% - 32px);padding:13px;
+  background:var(--ac);color:#000;border:none;border-radius:99px;
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+/* sheet overlay */
+.rdr-sheet-ov{position:absolute;inset:0;z-index:40;background:rgba(0,0,0,.5);display:none}
+.rdr-sheet-ov.open{display:block}
+
+/* MORE PAGE */
+.more-section{padding:8px 0}
+.more-section-title{font-size:12px;color:var(--mu);padding:10px 16px 4px;text-transform:uppercase;letter-spacing:.8px;font-weight:500}
+.more-item{
+  display:flex;align-items:center;gap:14px;padding:13px 16px;cursor:pointer;
+  transition:background .15s;
+}
+.more-item:active{background:rgba(255,255,255,.07)}
+.more-ic{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.more-label{font-size:14px;font-weight:400;flex:1}
+.more-arrow{color:#555;font-size:16px}
+.more-divider{height:1px;background:var(--bd);margin:4px 0}
+.more-toggle{width:48px;height:26px;border-radius:99px;background:var(--sf3);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.more-toggle.on{background:var(--ac)}
+.more-toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.more-toggle.on::after{transform:translateX(22px)}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{
+  display:flex;align-items:center;
+  background:rgba(13,13,13,.97);border-top:1px solid var(--bd);
+  height:var(--nav-h);flex-shrink:0;
+  padding-bottom:env(safe-area-inset-bottom,0);
+}
+.bnav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;padding:8px 4px;border:none;background:none;
+  font-family:inherit;color:var(--mu);transition:color .2s;position:relative;
+}
+.bnav-item.on{color:var(--ac)}
+.bnav-ic-wrap{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:99px;transition:background .2s;position:relative}
+.bnav-item.on .bnav-ic-wrap{background:rgba(168,199,250,.15)}
+.bnav-label{font-size:11px;font-weight:500;letter-spacing:.2px}
+.bnav-badge{
+  position:absolute;top:-2px;right:-4px;background:#e8361a;color:#fff;
+  font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:99px;
+  display:flex;align-items:center;justify-content:center;padding:0 3px;
+  border:1.5px solid var(--bg);
+}
+
+/* ── MODALS ── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;display:none;align-items:flex-end;justify-content:center}
+.ov.open{display:flex}
+.modal{
+  background:#1e1e1e;border-radius:20px 20px 0 0;width:100%;max-width:500px;
+  padding:0 0 env(safe-area-inset-bottom,16px);
+  animation:slideUp .25s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-drag{width:36px;height:4px;border-radius:99px;background:#444;margin:12px auto 4px}
+.modal-title{font-size:17px;font-weight:600;padding:12px 20px 0}
+.modal-body{padding:16px 20px}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.inp{
+  width:100%;background:var(--sf3);border:1px solid var(--bd);color:var(--tx);
+  font-family:inherit;font-size:14px;padding:10px 13px;border-radius:10px;
+  outline:none;transition:border-color .2s;
+}
+.inp:focus{border-color:var(--ac)}.inp::placeholder{color:#555}
+.modal-btns{display:flex;gap:8px;padding:4px 20px 16px}
+.btn{padding:10px 20px;border-radius:99px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-cancel{background:var(--sf3);color:var(--mu)}.btn-cancel:active{background:var(--bd)}
+.btn-ok{background:var(--ac);color:#000;flex:1}.btn-ok:active{opacity:.85}
+
+/* CAT PICKER */
+.cpicker{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.cpi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);cursor:pointer;transition:all .15s;background:var(--sf2)}
+.cpi.sel{border-color:var(--ac);background:rgba(168,199,250,.08)}
+.cpi-em{font-size:18px}.cpi-nm{font-size:13px;font-weight:500;flex:1}.cpi-cnt{font-size:11px;color:var(--mu)}
+
+/* SPINNER / STATES */
+.spw{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;flex:1}
+.sp{width:28px;height:28px;border-radius:50%;border:3px solid var(--sf3);border-top-color:var(--ac);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sp-msg{font-size:13px;color:var(--mu)}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:calc(var(--nav-h) + 12px);left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:#2e2e2e;border:1px solid #3a3a3a;color:var(--tx);
+  padding:10px 18px;border-radius:8px;font-size:13px;
+  z-index:9999;opacity:0;transition:opacity .25s,transform .25s;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:#2e1a1a;border-color:#5a2a2a;color:#ff8a8a}
+
+/* DOWNLOAD PROGRESS */
+.dl-prog{
+  position:fixed;bottom:calc(var(--nav-h) + 12px);left:50%;
+  transform:translateX(-50%);background:#1e1e1e;border:1px solid var(--bd);
+  border-radius:12px;padding:14px 18px;min-width:260px;z-index:9998;display:none;
+}
+.dl-prog.show{display:block}
+.dl-t{font-size:12px;font-weight:500;margin-bottom:8px}
+.dl-bw{background:var(--sf3);border-radius:99px;height:3px;margin-bottom:6px;overflow:hidden}
+.dl-b{height:100%;background:var(--ac);border-radius:99px;transition:width .3s;width:0%}
+.dl-i{font-size:11px;color:var(--mu)}
+
+/* SVG ICONS */
+svg{flex-shrink:0}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE / FLUID LAYOUT
+══════════════════════════════════════════════════════════ */
+
+/* ── Fluid container: phone=full, tablet+=limited ── */
+.app{
+  max-width: clamp(320px, 100%, 600px);
+}
+
+/* ── Skeleton loading shimmer ── */
+@keyframes shimmer{
+  0%{background-position:-400px 0}
+  100%{background-position:400px 0}
+}
+.skeleton{
+  background: linear-gradient(90deg, var(--sf2) 25%, var(--sf3) 50%, var(--sf2) 75%);
+  background-size:800px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius:6px;
+}
+
+/* ── Ripple effect ── */
+.ripple-host{position:relative;overflow:hidden}
+@keyframes ripple-anim{
+  to{transform:scale(4);opacity:0}
+}
+.ripple-el{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,.25);
+  pointer-events:none;
+  animation:ripple-anim .5s ease-out forwards;
+  transform:scale(0);
+}
+
+/* ── Double-tap zoom ── */
+#rdr-scroll img.zoomed{
+  transform-origin:var(--zoom-x,50%) var(--zoom-y,50%);
+  transform:scale(2.5);
+  transition:transform .25s;
+  cursor:zoom-out;
+}
+#rdr-scroll img{transition:transform .25s;cursor:zoom-in;}
+
+/* ══════════════════════════════════════════════════════════
+   TABLET / DESKTOP — Navigation Rail (≥700px)
+══════════════════════════════════════════════════════════ */
+@media(min-width:700px){
+  /* Expand max-width for tablet */
+  .app{ max-width:clamp(600px,100%,900px); }
+
+  /* App becomes row: rail on left, content on right */
+  .app{
+    flex-direction:row !important;
+  }
+
+  /* Rail replaces bottom-nav */
+  .bottom-nav{
+    flex-direction:column !important;
+    width:80px;
+    height:100% !important;
+    border-top:none !important;
+    border-right:1px solid var(--bd);
+    padding-bottom:0 !important;
+    padding-top:12px;
+    flex-shrink:0;
+    order:-1; /* appears on left */
+  }
+  .bnav-item{
+    flex:none !important;
+    width:100%;
+    padding:12px 4px !important;
+    flex-direction:column;
+    gap:4px;
+  }
+  .bnav-label{font-size:10px}
+
+  /* Pages wrap fills remaining space */
+  #pages-wrap{ flex:1; }
+
+  /* Reader fullscreen still covers everything */
+  #reader-view{ left:0 !important; }
+
+  /* Wider manga grid on tablet */
+  .lib-grid{
+    grid-template-columns: repeat(auto-fill, minmax(clamp(100px,14vw,160px), 1fr)) !important;
+  }
+  .mgrid{
+    grid-template-columns: repeat(auto-fill, minmax(clamp(110px,14vw,160px), 1fr)) !important;
+  }
+
+  /* Modals full-height sheet on wide screens */
+  .modal{ max-width:520px; }
+}
+
+/* ── Adaptive grid base (phones) ── */
+.lib-grid{
+  grid-template-columns: repeat(auto-fill, minmax(clamp(90px, 28vw, 140px), 1fr));
+}
+.mgrid{
+  grid-template-columns: repeat(auto-fill, minmax(clamp(100px, 30vw, 150px), 1fr));
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div id="pages-wrap" style="flex:1;min-height:0;position:relative;overflow:hidden;">
+
+  <!-- ═══════════════════════════════ LIBRARY PAGE ═══════════════════════════════ -->
+  <div id="page-library" class="page on" style="display:flex;flex-direction:column;height:100%;position:absolute;inset:0;overflow:hidden">
+
+    <div class="topbar">
+      <div class="topbar-title" id="lib-topbar-title">Library</div>
+      <div class="topbar-actions">
+        <button class="ic-btn" onclick="toggleLibSearch()" title="Search">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </button>
+        <button class="ic-btn" onclick="openLibSheet('sort')" title="Sort &amp; Filter">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        </button>
+        <button class="ic-btn" onclick="openMenu()" title="More">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search bar (hidden by default) -->
+    <div id="lib-search-bar" style="display:none;padding:0 12px 8px;flex-shrink:0">
+      <div class="search-bar">
+        <svg width="16" height="16" fill="none" stroke="#555" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input placeholder="Search library..." oninput="filterLib(this.value)" id="lib-search-inp"/>
+        <button onclick="clearLibSearch()" style="background:none;border:none;color:#555;cursor:pointer;font-size:18px;padding:0;line-height:1">×</button>
+      </div>
+    </div>
+
+    <!-- Category tabs -->
+    <div class="cat-tabs-row" id="lib-tabs-row"></div>
+
+    <!-- Library content -->
+    <div class="page-wrap" id="lib-content"></div>
+  </div>
+
+  <!-- ═══════════════════════════════ UPDATES PAGE ═══════════════════════════════ -->
+  <div id="page-updates" class="page" style="display:none;flex-direction:column;height:100%;position:absolute;inset:0;overflow:hidden">
+    <div class="topbar">
+      <div class="topbar-title">Updates</div>
+      <div class="topbar-actions">
+        <button class="ic-btn" id="upd-refresh-btn" onclick="checkUpdates(true)" title="Refresh">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <button class="ic-btn" onclick="clearUpdates()" title="Clear all">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div style="padding:4px 16px 0;font-size:11px;color:#555;flex-shrink:0" id="upd-last-check"></div>
+    <div class="page-wrap" id="updates-content"></div>
+  </div>
+
+  <!-- ═══════════════════════════════ HISTORY PAGE ═══════════════════════════════ -->
+  <div id="page-history" class="page" style="display:none;flex-direction:column;height:100%;position:absolute;inset:0;overflow:hidden">
+    <div class="topbar">
+      <div class="topbar-title">History</div>
+      <div class="topbar-actions">
+        <button class="ic-btn" onclick="clearHistory()" title="Clear all">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+        <button class="ic-btn" title="Search">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="page-wrap" id="history-content"></div>
+  </div>
+
+  <!-- ═══════════════════════════════ BROWSE PAGE ═══════════════════════════════ -->
+  <div id="page-browse" class="page" style="display:none;flex-direction:column;height:100%;position:absolute;inset:0;overflow:hidden">
+
+    <!-- Sources list view -->
+    <div id="browse-home" style="display:flex;flex-direction:column;height:100%">
+      <div class="topbar">
+        <div class="topbar-title">Browse</div>
+        <div class="topbar-actions">
+          <button class="ic-btn" onclick="openSourceModal()" title="Add source">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="page-wrap" id="src-list-wrap"></div>
+    </div>
+
+    <!-- Manga browse view (shown when source selected) -->
+    <div id="browse-detail" style="display:none;flex-direction:column;height:100%">
+      <div class="browse-topbar">
+        <button class="ic-btn" onclick="closeBrowseDetail()" id="browse-back-btn">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <span id="browse-src-name" style="font-size:16px;font-weight:500;flex:1"></span>
+        <span id="browse-src-icon" style="font-size:18px;margin-right:4px"></span>
+      </div>
+      <div class="browse-tabs-bar">
+        <button class="brtab on" id="brtab-pop" onclick="browseSwitchTab('popular')">Popular</button>
+        <button class="brtab" id="brtab-lat" onclick="browseSwitchTab('latest')">Latest</button>
+        <div style="flex:1"></div>
+        <select id="browse-lang" onchange="browseChangeLang(this.value)" style="background:transparent;border:none;color:var(--mu);font-size:13px;padding:0 12px;cursor:pointer;outline:none;font-family:inherit">
+          <option value="en">EN</option><option value="ar">AR</option><option value="ja">JA</option>
+          <option value="ko">KO</option><option value="zh">ZH</option><option value="fr">FR</option>
+          <option value="es">ES</option><option value="pt">PT</option>
+        </select>
+      </div>
+      <div class="search-bar" style="margin:8px 12px;flex-shrink:0">
+        <svg width="16" height="16" fill="none" stroke="#555" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="search-inp" placeholder="Search…" autocomplete="off" oninput="onSearchInput(this.value)"/>
+        <button id="search-clear" onclick="clearSearch()" style="background:none;border:none;color:#555;cursor:pointer;font-size:18px;padding:0;display:none;line-height:1">×</button>
+      </div>
+      <div class="page-wrap" id="browse-content"></div>
+    </div>
+
+    <!-- Manga detail view -->
+    <div id="manga-detail" style="display:none;flex-direction:column;height:100%">
+      <!-- Normal topbar -->
+      <div class="browse-topbar" id="det-normal-bar">
+        <button class="ic-btn" onclick="closeMangaDetail()">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <span style="flex:1;font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="det-topbar-title"></span>
+        <button class="ic-btn" onclick="openAddLib(B.manga)" title="Add to library">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <button class="ic-btn" onclick="enterSelectionMode()" title="Select chapters">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/><line x1="9" y1="10" x2="9" y2="14"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        </button>
+      </div>
+      <!-- Selection topbar -->
+      <div class="sel-topbar" id="det-sel-bar">
+        <button class="ic-btn" onclick="exitSelectionMode()">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <span class="sel-count" id="sel-count">0 selected</span>
+        <button class="sel-action-btn" onclick="openSelSheet()">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+          Actions
+        </button>
+      </div>
+      <div class="page-wrap" id="det-content"></div>
+    </div>
+
+    <!-- SELECTION ACTIONS SHEET -->
+    <div class="sel-sheet" id="sel-sheet" onclick="if(event.target===this||event.target.classList.contains('sel-sheet-ov'))closeSelSheet()">
+      <div class="sel-sheet-ov"></div>
+      <div class="sel-sheet-body">
+        <div class="sel-drag"></div>
+        <div class="sel-item" onclick="closeSelSheet();selSelectAll()">
+          <span class="sel-item-ic">☑</span><span class="sel-item-label">Select all</span>
+        </div>
+        <div class="sel-item" onclick="closeSelSheet();selInvertSelection()">
+          <span class="sel-item-ic">🔄</span><span class="sel-item-label">Invert selection</span>
+        </div>
+        <div class="sel-item" onclick="closeSelSheet();selSelectUnread()">
+          <span class="sel-item-ic">📖</span><span class="sel-item-label">Select unread</span>
+        </div>
+        <div class="sel-item" onclick="closeSelSheet();selSelectBelow()">
+          <span class="sel-item-ic">⬇</span><span class="sel-item-label">Select all below</span>
+        </div>
+        <div style="height:1px;background:var(--bd);margin:4px 0"></div>
+        <div class="sel-item" onclick="closeSelSheet();selDownload()">
+          <span class="sel-item-ic">📥</span><span class="sel-item-label">Download selected</span>
+        </div>
+        <div class="sel-item" onclick="closeSelSheet();selMarkRead(true)">
+          <span class="sel-item-ic">✅</span><span class="sel-item-label">Mark as read</span>
+        </div>
+        <div class="sel-item" onclick="closeSelSheet();selMarkRead(false)">
+          <span class="sel-item-ic">⭕</span><span class="sel-item-label">Mark as unread</span>
+        </div>
+        <div class="sel-item" onclick="closeSelSheet();selDeleteDownloads()">
+          <span class="sel-item-ic">🗑</span><span class="sel-item-label">Delete downloads</span>
+        </div>
+        <div style="height:1px;background:var(--bd);margin:4px 0"></div>
+        <div class="sel-item" onclick="closeSelSheet();selDownloadN(5)">
+          <span class="sel-item-ic">5️⃣</span><span class="sel-item-label">Download next 5 unread</span>
+        </div>
+        <div class="sel-item" onclick="closeSelSheet();selDownloadN(10)">
+          <span class="sel-item-ic">🔟</span><span class="sel-item-label">Download next 10 unread</span>
+        </div>
+        <div class="sel-item" onclick="closeSelSheet();selDownloadN(25)">
+          <span class="sel-item-ic">💯</span><span class="sel-item-label">Download next 25 unread</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════ MORE PAGE ═══════════════════════════════ -->
+  <div id="page-more" class="page" style="display:none;flex-direction:column;height:100%;position:absolute;inset:0;overflow:hidden">
+    <div class="topbar"><div class="topbar-title">More</div></div>
+    <div class="page-wrap">
+      <div class="more-section">
+        <div class="more-divider" style="margin:0 0 4px"></div>
+        <div class="more-item" onclick="showDownloadsPage()">
+          <div class="more-ic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <div class="more-label">Downloaded chapters</div>
+          <div class="more-arrow">›</div>
+        </div>
+        <div class="more-divider"></div>
+        <div class="more-section-title">Settings</div>
+        <div class="more-item" onclick="showSettingsPage()">
+          <div class="more-ic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 17.66l-1.41 1.41M4.93 4.93l1.41 1.41M17.66 18.66l1.41-1.41M1 12h2M21 12h2M12 1v2M12 21v2"/></svg>
+          </div>
+          <div class="more-label">Settings</div>
+          <div class="more-arrow">›</div>
+        </div>
+        <div class="more-item" onclick="openSourceModal()">
+          <div class="more-ic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </div>
+          <div class="more-label">Add source</div>
+          <div class="more-arrow">›</div>
+        </div>
+        <div class="more-divider"></div>
+        <div class="more-section-title">Info</div>
+        <div class="more-item">
+          <div class="more-ic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </div>
+          <div class="more-label">About</div>
+          <div class="more-arrow">›</div>
+        </div>
+        <div class="more-item">
+          <div class="more-ic" style="font-size:18px">📄</div>
+          <div class="more-label" style="flex:1">Version</div>
+          <div style="font-size:12px;color:var(--mu)">1.0.0</div>
+        </div>
+      </div>
+      <div style="padding:24px 16px;text-align:center;font-size:12px;color:#333">Inspired by Mihon / Tachiyomi</div>
+    </div>
+  </div>
+
+  <!-- ── DOWNLOADS SUB-PAGE (shown over More) ── -->
+  <div id="page-downloads" style="display:none;flex-direction:column;position:fixed;inset:0 0 var(--nav-h) 0;background:var(--bg);z-index:500;max-width:500px;margin:0 auto">
+    <div class="topbar">
+      <button class="ic-btn" onclick="closeSubPage('page-downloads')">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="topbar-title">Downloaded chapters</div>
+    </div>
+    <div class="page-wrap" id="dl-page-content"></div>
+  </div>
+
+  <!-- ── SETTINGS SUB-PAGE ── -->
+  <div id="page-settings" style="display:none;flex-direction:column;position:fixed;inset:0 0 var(--nav-h) 0;background:var(--bg);z-index:500;max-width:500px;margin:0 auto">
+    <div class="topbar">
+      <button class="ic-btn" onclick="closeSubPage('page-settings')">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="topbar-title">Settings</div>
+    </div>
+
+    <!-- FS reconnect banner -->
+    <div id="fs-banner" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(168,199,250,.1);border-bottom:1px solid rgba(168,199,250,.2);flex-shrink:0">
+      <svg width="18" height="18" fill="none" stroke="var(--ac)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div style="flex:1;font-size:12px;color:var(--ac)">Reconnect "<span id="fs-banner-name"></span>" to use offline downloads</div>
+      <button onclick="pickStorageFolder()" style="background:var(--ac);border:none;color:#000;font-family:inherit;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer">Connect</button>
+    </div>
+
+    <div class="page-wrap">
+      <div class="more-section">
+
+        <!-- STORAGE SECTION -->
+        <div class="more-section-title">Download Storage</div>
+
+        <!-- Current usage info -->
+        <div style="padding:10px 16px 6px">
+          <div style="background:var(--sf2);border-radius:10px;padding:12px 14px">
+            <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Storage usage</div>
+            <div id="storage-usage" style="font-size:13px;color:var(--tx)">Calculating...</div>
+          </div>
+        </div>
+
+        <!-- Option A: Browser storage (IndexedDB) -->
+        <div style="padding:6px 16px">
+          <div style="background:var(--sf2);border-radius:10px;padding:14px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span style="font-size:18px">🌐</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500">Browser Storage</div>
+                <div style="font-size:11px;color:var(--mu)">IndexedDB — managed by browser, may be cleared</div>
+              </div>
+              <div id="idb-status" style="font-size:11px;color:#4ade80">Active</div>
+            </div>
+            <button onclick="switchToIDB()" style="width:100%;background:var(--sf3);border:1px solid var(--bd);color:var(--tx);font-family:inherit;font-size:12px;padding:8px;border-radius:8px;cursor:pointer">Use Browser Storage</button>
+          </div>
+
+          <!-- Option B: File System Access API -->
+          <div style="background:var(--sf2);border-radius:10px;padding:14px" id="fs-option">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span style="font-size:18px">📁</span>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-size:13px;font-weight:500">Device Folder</span>
+                  <span id="fs-badge" style="font-size:11px;font-weight:600"></span>
+                </div>
+                <div style="font-size:11px;color:var(--mu)">File System Access API — you choose the folder</div>
+              </div>
+            </div>
+            <div id="fs-status" style="font-size:11px;color:#555;margin-bottom:8px;padding:6px 8px;background:var(--sf3);border-radius:6px">Not connected</div>
+            <div id="fs-not-supported" style="display:none;font-size:11px;color:#f87171;margin-bottom:8px">⚠ Not supported — use Chrome or Kiwi Browser</div>
+            <button onclick="pickStorageFolder()" id="fs-pick-btn" style="width:100%;background:var(--ac);color:#000;border:none;font-family:inherit;font-size:12px;font-weight:600;padding:8px;border-radius:8px;cursor:pointer">
+              📂 Choose Folder…
+            </button>
+            <div style="font-size:10px;color:#555;margin-top:6px;line-height:1.5">
+              ⚠ Note: Permission must be re-granted each browser session (browser security limitation). Folder must be re-selected after closing the browser.
+            </div>
+          </div>
+        </div>
+
+        <div class="more-divider"></div>
+        <div class="more-section-title">Library</div>
+        <div class="more-item">
+          <div class="more-ic">🖼</div>
+          <div class="more-label">Show cover art</div>
+          <button class="more-toggle on" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="more-item" onclick="if(confirm('Clear all library data?')){localStorage.clear();location.reload()}">
+          <div class="more-ic">🗑</div>
+          <div class="more-label" style="color:#ff6b6b">Clear all data</div>
+          <div class="more-arrow">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MENU POPUP ── -->
+  <div id="ov-menu" class="ov" onclick="if(event.target===this)closeMenu()">
+    <div class="modal" style="border-radius:20px 20px 0 0">
+      <div class="modal-drag"></div>
+      <div style="padding:4px 0 8px">
+        <div class="more-item" onclick="closeMenu();openCatModal()">
+          <div class="more-ic">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="more-label">New category</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ADD SOURCE MODAL ── -->
+  <div class="ov" id="ov-source" onclick="if(event.target===this)closeSourceModal()">
+    <div class="modal">
+      <div class="modal-drag"></div>
+      <div class="modal-title">Add Source</div>
+      <div class="modal-body">
+        <div class="fld"><label>Name</label><input class="inp" id="f-name" placeholder="MangaHere"/></div>
+        <div class="fld"><label>Filename (same folder as hub.html)</label><input class="inp" id="f-file" placeholder="mangadex-source.html"/></div>
+        <div class="fld"><label>Icon (emoji)</label><input class="inp" id="f-icon" placeholder="🔵" style="max-width:90px"/></div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-cancel" onclick="closeSourceModal()">Cancel</button>
+        <button class="btn btn-ok" onclick="confirmAddSource()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NEW CATEGORY MODAL ── -->
+  <div class="ov" id="ov-cat" onclick="if(event.target===this)closeCatModal()">
+    <div class="modal">
+      <div class="modal-drag"></div>
+      <div class="modal-title">New category</div>
+      <div class="modal-body">
+        <div class="fld"><label>Name</label><input class="inp" id="cat-nm-inp" placeholder="Reading, Favorites..."/></div>
+        <div class="fld"><label>Icon</label><input class="inp" id="cat-ic-inp" placeholder="📖" style="max-width:90px"/></div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-cancel" onclick="closeCatModal()">Cancel</button>
+        <button class="btn btn-ok" onclick="confirmNewCat()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ADD TO LIBRARY MODAL ── -->
+  <div class="ov" id="ov-addlib" onclick="if(event.target===this)closeAddLib()">
+    <div class="modal">
+      <div class="modal-drag"></div>
+      <div class="modal-title">Add to library</div>
+      <div class="modal-body">
+        <div style="font-size:14px;font-weight:500;margin-bottom:12px;color:var(--mu)" id="addlib-title"></div>
+        <div class="cpicker" id="cpicker"></div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <input class="inp" id="quick-cat" placeholder="Or create new category..." style="flex:1"/>
+          <button class="btn btn-ok" onclick="quickCat()" style="padding:10px 14px;white-space:nowrap">+</button>
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-cancel" onclick="closeAddLib()">Cancel</button>
+        <button class="btn btn-ok" onclick="confirmAddLib()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /pages-wrap -->
+
+  <!-- ═══ READER fullscreen (outside pages) ═══ -->
+  <!-- Reader view — FULL SCREEN -->
+  <div id="reader-view">
+    <div id="rdr-inner">
+
+    <!-- TOP BAR -->
+    <div class="rdr-topbar" id="rdr-topbar">
+      <button class="ic-btn" onclick="closeReader()" style="color:#fff">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="rdr-topbar-title">
+        <b id="rdr-manga-title"></b>
+        <small id="rdr-ch-label"></small>
+      </div>
+      <button class="ic-btn" onclick="downloadChapter(B.chIdx,B.manga?.title||'')" style="color:#fff">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="ic-btn" style="color:#fff">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg>
+      </button>
+    </div>
+
+    <!-- TAP ZONES -->
+    <div id="tap-left"  class="rdr-tap-zone" onclick="rdrTapLeft()"></div>
+    <div id="tap-mid"   class="rdr-tap-zone" onclick="rdrToggleUI()"></div>
+    <div id="tap-right" class="rdr-tap-zone" onclick="rdrTapRight()"></div>
+
+    <!-- PAGES -->
+    <div class="rdr-scroll" id="rdr-scroll">
+      <div class="rpage-wrap" id="rpage-wrap"></div>
+    </div>
+
+    <!-- BOTTOM CONTROLS -->
+    <div class="rdr-btm" id="rdr-btm">
+      <!-- Slider row -->
+      <div class="rdr-nav">
+        <button class="rdr-ch-btn" id="rdr-prev-ch" onclick="readerPrev()" title="Previous chapter">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <div class="rdr-slider-wrap">
+          <span class="rdr-pg-num" id="rdr-pg-cur">1</span>
+          <input type="range" class="rdr-slider" id="rdr-slider" min="1" value="1" oninput="rdrSliderInput(this.value)" onchange="rdrSliderChange(this.value)"/>
+          <span class="rdr-pg-num" id="rdr-pg-tot">?</span>
+        </div>
+        <button class="rdr-ch-btn" id="rdr-next-ch" onclick="readerNext()" title="Next chapter">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+      </div>
+      <!-- Actions row -->
+      <div class="rdr-acts">
+        <button class="rdr-act" onclick="openReadingModeSheet()" id="rdr-mode-act">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM5 10h9v2H5zm0-3h9v2H5zm0 6h6v2H5z"/></svg>
+          <span id="rdr-mode-label">Long strip</span>
+        </button>
+        <button class="rdr-act" onclick="openRotSheet()" id="rdr-rotate-act">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7.47 21.49C4.2 19.93 1.86 16.76 1.5 13H0c.51 6.16 5.66 11 11.95 11 .23 0 .44-.02.66-.03L9.1 20.45l-1.63 1.04zM12.05 0c-.23 0-.44.02-.66.03L14.9 3.55l1.63-1.04C19.8 4.07 22.14 7.24 22.5 11H24C23.49 4.84 18.34 0 12.05 0zM16 14h2V8c0-1.1-.9-2-2-2h-6v2h6v6zm-8 2V6H6v2H4v2h2v6c0 1.1.9 2 2 2h6v2h2v-2h2v-2H8z"/></svg>
+          <span>Rotate</span>
+        </button>
+        <button class="rdr-act" onclick="rdrToggleCrop(this)" id="rdr-crop-act">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/></svg>
+          <span>Crop</span>
+        </button>
+        <button class="rdr-act" onclick="openRdrSettings()" id="rdr-settings-act">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          <span>Settings</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SWIPE HINT -->
+    <div class="rdr-swipe-hint" id="rdr-swipe-hint"></div>
+
+    <!-- SHEET OVERLAY (shared) -->
+    <div class="rdr-sheet-ov" id="rdr-sheet-ov" onclick="closeAllRdrSheets()"></div>
+
+    <!-- READING MODE SHEET -->
+    <div class="rdr-mode-sheet" id="rdr-mode-sheet">
+      <div class="rdr-mode-drag"></div>
+      <div class="rdr-mode-title">Reading mode</div>
+      <div class="rdr-mode-grid">
+        <button class="rdr-mode-btn" data-mode="ltr" onclick="selectReadMode('ltr')">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="9" height="16" rx="1"/><rect x="13" y="4" width="9" height="16" rx="1"/><path d="M8 12h8M13 9l3 3-3 3"/></svg>
+          <span class="rdr-mode-label">Paged<br>(left to right)</span>
+        </button>
+        <button class="rdr-mode-btn" data-mode="rtl" onclick="selectReadMode('rtl')">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="9" height="16" rx="1"/><rect x="13" y="4" width="9" height="16" rx="1"/><path d="M16 12H8M11 9L8 12l3 3"/></svg>
+          <span class="rdr-mode-label">Paged<br>(right to left)</span>
+        </button>
+        <button class="rdr-mode-btn" data-mode="vertical" onclick="selectReadMode('vertical')">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="9" rx="1"/><rect x="4" y="13" width="16" height="9" rx="1"/><path d="M12 8v8M9 13l3 3 3-3"/></svg>
+          <span class="rdr-mode-label">Paged<br>(vertical)</span>
+        </button>
+        <button class="rdr-mode-btn sel" data-mode="webtoon" onclick="selectReadMode('webtoon')">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="1"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><path d="M12 16v4M9 19l3 2 3-2"/></svg>
+          <span class="rdr-mode-label">Long strip</span>
+        </button>
+        <button class="rdr-mode-btn" data-mode="webtoon-gaps" onclick="selectReadMode('webtoon-gaps')">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="8" rx="1"/><rect x="4" y="14" width="16" height="8" rx="1"/><path d="M12 10v4M9 13l3 2 3-2"/></svg>
+          <span class="rdr-mode-label">Long strip<br>with gaps</span>
+        </button>
+      </div>
+      <button class="rdr-mode-apply" onclick="applyReadMode()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        Apply
+      </button>
+    </div>
+
+    <!-- ROTATION SHEET -->
+    <div class="rdr-rot-sheet" id="rdr-rot-sheet">
+      <div class="rdr-mode-drag"></div>
+      <div class="rdr-rot-title">Rotation</div>
+      <div class="rdr-rot-grid">
+        <button class="rdr-rot-btn sel" data-rot="free" onclick="setRotation('free')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          Free (default)
+        </button>
+        <button class="rdr-rot-btn" data-rot="portrait" onclick="setRotation('portrait')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/></svg>
+          Portrait
+        </button>
+        <button class="rdr-rot-btn" data-rot="landscape" onclick="setRotation('landscape')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/></svg>
+          Landscape (90°)
+        </button>
+        <button class="rdr-rot-btn" data-rot="reverse-portrait" onclick="setRotation('reverse-portrait')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 16v-4M10 14l2 2 2-2"/></svg>
+          Upside down (180°)
+        </button>
+      </div>
+      <button class="rdr-mode-apply" onclick="closeRotSheet()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        Apply
+      </button>
+    </div>
+
+    <!-- ── READER SETTINGS SHEET ── -->
+    <div class="rdr-settings-sheet" id="rdr-settings-sheet">
+      <div class="rdr-mode-drag"></div>
+
+      <!-- 3 tabs -->
+      <div class="rdr-stab-bar">
+        <button class="rdr-stab on" id="rstab-rm"  onclick="rdrStabSwitch('rm')">Reading mode</button>
+        <button class="rdr-stab"    id="rstab-gen" onclick="rdrStabSwitch('gen')">General</button>
+        <button class="rdr-stab"    id="rstab-cf"  onclick="rdrStabSwitch('cf')">Custom filter</button>
+      </div>
+
+      <!-- ── READING MODE panel ── -->
+      <div class="rdr-stab-panel on" id="rpanel-rm">
+        <div class="rdr-sec">Reading mode</div>
+        <div class="rdr-chips" id="rchips-mode">
+          <button class="rdr-chip" data-rm="webtoon"      onclick="rdrSetMode('webtoon')">Long strip</button>
+          <button class="rdr-chip" data-rm="webtoon-gaps" onclick="rdrSetMode('webtoon-gaps')">Long strip with gaps</button>
+          <button class="rdr-chip" data-rm="ltr"          onclick="rdrSetMode('ltr')">Paged (left to right)</button>
+          <button class="rdr-chip" data-rm="rtl"          onclick="rdrSetMode('rtl')">Paged (right to left)</button>
+          <button class="rdr-chip" data-rm="vertical"     onclick="rdrSetMode('vertical')">Paged (vertical)</button>
+        </div>
+
+        <div class="rdr-sec">Rotation</div>
+        <div class="rdr-chips" id="rchips-rot">
+          <button class="rdr-chip" data-rot="free"             onclick="rdrSetRot('free')">Default</button>
+          <button class="rdr-chip" data-rot="portrait"         onclick="rdrSetRot('portrait')">Portrait</button>
+          <button class="rdr-chip" data-rot="landscape"        onclick="rdrSetRot('landscape')">Landscape</button>
+          <button class="rdr-chip" data-rot="reverse-portrait" onclick="rdrSetRot('reverse-portrait')">Reverse portrait</button>
+        </div>
+
+        <div class="rdr-sec">Scale type</div>
+        <div class="rdr-chips" id="rchips-scale">
+          <button class="rdr-chip on" data-scale="fit"     onclick="rdrSetScale('fit')">Fit screen</button>
+          <button class="rdr-chip"    data-scale="stretch" onclick="rdrSetScale('stretch')">Stretch</button>
+          <button class="rdr-chip"    data-scale="width"   onclick="rdrSetScale('width')">Fit width</button>
+          <button class="rdr-chip"    data-scale="height"  onclick="rdrSetScale('height')">Fit height</button>
+          <button class="rdr-chip"    data-scale="orig"    onclick="rdrSetScale('orig')">Original size</button>
+        </div>
+
+        <div class="rdr-div"></div>
+
+        <label class="rdr-check-row" onclick="rdrToggleSetting('cropBorders')">
+          <div class="rdr-checkbox" id="chk-cropBorders"></div>
+          <span class="rdr-check-label">Crop borders</span>
+        </label>
+        <label class="rdr-check-row" onclick="rdrToggleSetting('splitWide')">
+          <div class="rdr-checkbox" id="chk-splitWide"></div>
+          <span class="rdr-check-label">Split wide pages</span>
+        </label>
+        <label class="rdr-check-row" onclick="rdrToggleSetting('rotateWide')">
+          <div class="rdr-checkbox" id="chk-rotateWide"></div>
+          <span class="rdr-check-label">Rotate wide pages to fit</span>
+        </label>
+      </div>
+
+      <!-- ── GENERAL panel ── -->
+      <div class="rdr-stab-panel" id="rpanel-gen">
+        <div class="rdr-sec">Display</div>
+        <label class="rdr-check-row" onclick="rdrToggleSetting('showPageNum')">
+          <div class="rdr-checkbox on" id="chk-showPageNum"></div>
+          <span class="rdr-check-label">Show page number</span>
+        </label>
+        <label class="rdr-check-row" onclick="rdrToggleSetting('keepScreenOn')">
+          <div class="rdr-checkbox" id="chk-keepScreenOn"></div>
+          <span class="rdr-check-label">Keep screen on</span>
+        </label>
+        <label class="rdr-check-row" onclick="rdrToggleSetting('fullscreen')">
+          <div class="rdr-checkbox on" id="chk-fullscreen"></div>
+          <span class="rdr-check-label">Fullscreen</span>
+        </label>
+
+        <div class="rdr-sec">Transitions</div>
+        <label class="rdr-check-row" onclick="rdrToggleSetting('pageTransitions')">
+          <div class="rdr-checkbox on" id="chk-pageTransitions"></div>
+          <span class="rdr-check-label">Page transitions</span>
+        </label>
+      </div>
+
+      <!-- ── CUSTOM FILTER panel ── -->
+      <div class="rdr-stab-panel" id="rpanel-cf">
+        <div class="rdr-sec">Brightness</div>
+        <div style="padding:0 18px 14px">
+          <input type="range" id="cf-brightness" min="0" max="200" value="100"
+            class="rdr-slider" style="width:100%" oninput="rdrApplyFilter()"/>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-top:4px">
+            <span>0%</span><span id="cf-brightness-val">100%</span><span>200%</span>
+          </div>
+        </div>
+
+        <div class="rdr-sec">Contrast</div>
+        <div style="padding:0 18px 14px">
+          <input type="range" id="cf-contrast" min="0" max="200" value="100"
+            class="rdr-slider" style="width:100%" oninput="rdrApplyFilter()"/>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-top:4px">
+            <span>0%</span><span id="cf-contrast-val">100%</span><span>200%</span>
+          </div>
+        </div>
+
+        <div class="rdr-sec">Saturation</div>
+        <div style="padding:0 18px 14px">
+          <input type="range" id="cf-saturation" min="0" max="200" value="100"
+            class="rdr-slider" style="width:100%" oninput="rdrApplyFilter()"/>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-top:4px">
+            <span>0%</span><span id="cf-saturation-val">100%</span><span>200%</span>
+          </div>
+        </div>
+
+        <div class="rdr-sec">Hue shift</div>
+        <div style="padding:0 18px 14px">
+          <input type="range" id="cf-hue" min="0" max="360" value="0"
+            class="rdr-slider" style="width:100%" oninput="rdrApplyFilter()"/>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-top:4px">
+            <span>0°</span><span id="cf-hue-val">0°</span><span>360°</span>
+          </div>
+        </div>
+
+        <div class="rdr-sec">Presets</div>
+        <div class="rdr-chips">
+          <button class="rdr-chip" onclick="rdrFilterPreset('none')">None</button>
+          <button class="rdr-chip" onclick="rdrFilterPreset('grayscale')">Grayscale</button>
+          <button class="rdr-chip" onclick="rdrFilterPreset('inverted')">Inverted</button>
+          <button class="rdr-chip" onclick="rdrFilterPreset('warm')">Warm</button>
+          <button class="rdr-chip" onclick="rdrFilterPreset('cool')">Cool</button>
+        </div>
+      </div>
+    </div><!-- /rdr-settings-sheet -->
+
+    </div><!-- /rdr-inner -->
+  </div>
+
+
+  <!-- ── LIBRARY SORT/FILTER SHEET ── -->
+  <div class="lib-sheet" id="lib-sheet" onclick="if(event.target===this||event.target.classList.contains('lib-sheet-ov'))closeLibSheet()">
+    <div class="lib-sheet-ov"></div>
+    <div class="lib-sheet-body">
+      <div class="lib-sheet-drag"></div>
+      <div class="lib-sheet-tabs">
+        <button class="lib-stab on" id="lstab-filter" onclick="libSheetTab('filter')">Filter</button>
+        <button class="lib-stab" id="lstab-sort" onclick="libSheetTab('sort')">Sort</button>
+        <button class="lib-stab" id="lstab-display" onclick="libSheetTab('display')">Display</button>
+      </div>
+      <!-- FILTER panel -->
+      <div class="lib-sheet-panel on" id="lpanel-filter">
+        <div class="lib-sort-item" onclick="toggleFilterRead()">
+          <span class="arrow" id="filt-read-ic"></span>
+          <span class="lib-sort-label">Unread</span>
+        </div>
+        <div class="lib-sort-item" onclick="toggleFilterDl()">
+          <span class="arrow" id="filt-dl-ic"></span>
+          <span class="lib-sort-label">Downloaded</span>
+        </div>
+      </div>
+      <!-- SORT panel -->
+      <div class="lib-sheet-panel" id="lpanel-sort">
+        <div class="lib-sort-item" onclick="setLibSort('alpha')">
+          <span class="arrow" id="sort-alpha-ic"></span>
+          <span class="lib-sort-label">Alphabetically</span>
+        </div>
+        <div class="lib-sort-item" onclick="setLibSort('chapters')">
+          <span class="arrow" id="sort-chapters-ic"></span>
+          <span class="lib-sort-label">Total chapters</span>
+        </div>
+        <div class="lib-sort-item" onclick="setLibSort('lastRead')">
+          <span class="arrow" id="sort-lastread-ic"></span>
+          <span class="lib-sort-label">Last read</span>
+        </div>
+        <div class="lib-sort-item" onclick="setLibSort('unread')">
+          <span class="arrow" id="sort-unread-ic"></span>
+          <span class="lib-sort-label">Unread count</span>
+        </div>
+        <div class="lib-sort-item" onclick="setLibSort('added')">
+          <span class="arrow" id="sort-added-ic">↓</span>
+          <span class="lib-sort-label">Date added</span>
+        </div>
+        <div class="lib-sort-item" onclick="setLibSort('random')">
+          <span class="arrow" id="sort-random-ic"></span>
+          <span class="lib-sort-label">Random</span>
+        </div>
+      </div>
+      <!-- DISPLAY panel -->
+      <div class="lib-sheet-panel" id="lpanel-display">
+        <div class="lib-disp-row">
+          <span class="lib-disp-label">Grid size</span>
+          <div class="lib-disp-btns">
+            <button class="lib-disp-btn" id="disp-small" onclick="setLibGrid('small')">Small</button>
+            <button class="lib-disp-btn on" id="disp-medium" onclick="setLibGrid('medium')">Medium</button>
+            <button class="lib-disp-btn" id="disp-large" onclick="setLibGrid('large')">Large</button>
+          </div>
+        </div>
+        <div class="lib-disp-row">
+          <span class="lib-disp-label">Show unread badge</span>
+          <button class="more-toggle on" id="toggle-badge" onclick="toggleUnreadBadge(this)"></button>
+        </div>
+        <div class="lib-disp-row">
+          <span class="lib-disp-label">Show title</span>
+          <button class="more-toggle on" id="toggle-title" onclick="toggleLibTitle(this)"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM NAV ── -->
+  <nav class="bottom-nav">
+    <!-- Library -->
+    <button class="bnav-item on" id="bnav-library" onclick="switchPage('library')">
+      <div class="bnav-ic-wrap">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/>
+        </svg>
+      </div>
+      <span class="bnav-label">Library</span>
+    </button>
+
+    <!-- Updates -->
+    <button class="bnav-item" id="bnav-updates" onclick="switchPage('updates')">
+      <div class="bnav-ic-wrap" style="position:relative">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+        </svg>
+        <span class="bnav-badge" id="updates-badge" style="display:none">0</span>
+      </div>
+      <span class="bnav-label">Updates</span>
+    </button>
+
+    <!-- History -->
+    <button class="bnav-item" id="bnav-history" onclick="switchPage('history')">
+      <div class="bnav-ic-wrap">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12z"/>
+        </svg>
+      </div>
+      <span class="bnav-label">History</span>
+    </button>
+
+    <!-- Browse -->
+    <button class="bnav-item" id="bnav-browse" onclick="switchPage('browse')">
+      <div class="bnav-ic-wrap" style="position:relative">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+        <span class="bnav-badge" id="browse-badge" style="display:none">0</span>
+      </div>
+      <span class="bnav-label">Browse</span>
+    </button>
+
+    <!-- More -->
+    <button class="bnav-item" id="bnav-more" onclick="switchPage('more')">
+      <div class="bnav-ic-wrap">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+        </svg>
+      </div>
+      <span class="bnav-label">More</span>
+    </button>
+  </nav>
+</div>
+
+<!-- DOWNLOAD PROGRESS -->
+<div class="dl-prog" id="dl-prog">
+  <div class="dl-t" id="dl-t">Downloading...</div>
+  <div class="dl-bw"><div class="dl-b" id="dl-b"></div></div>
+  <div class="dl-i" id="dl-i"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// ═══════════════════════════════ STORAGE ═══════════════════════════════
+const BUILTIN=[]; // No built-in sources — add your own from Browse
+const S={
+  getSrc(){try{return JSON.parse(localStorage.getItem('mhub_src')||'[]')}catch{return[]}},
+  saveSrc(a){localStorage.setItem('mhub_src',JSON.stringify(a))},
+  getCats(){try{return JSON.parse(localStorage.getItem('mhub_cats')||'[]')}catch{return[]}},
+  saveCats(a){localStorage.setItem('mhub_cats',JSON.stringify(a))},
+  getLib(){try{return JSON.parse(localStorage.getItem('mhub_lib')||'[]')}catch{return[]}},
+  saveLib(a){localStorage.setItem('mhub_lib',JSON.stringify(a))},
+  getHist(){try{return JSON.parse(localStorage.getItem('mhub_hist')||'[]')}catch{return[]}},
+  saveHist(a){localStorage.setItem('mhub_hist',JSON.stringify(a))},
+  getRdrMode(){return localStorage.getItem('mhub_rdr_mode')||'webtoon'},
+  getStorageMode(){return localStorage.getItem('mhub_storage_mode')||'idb'}, // 'idb' | 'fs'
+  saveStorageMode(m){localStorage.setItem('mhub_storage_mode',m)},
+  saveRdrMode(m){localStorage.setItem('mhub_rdr_mode',m)},
+  // updates feed: [{mangaId,sourceId,mangaTitle,cover,chapter,chTitle,chId,seenAt}]
+  getUpdates(){try{return JSON.parse(localStorage.getItem('mhub_updates')||'[]')}catch{return[]}},
+  saveUpdates(a){localStorage.setItem('mhub_updates',JSON.stringify(a.slice(0,500)))},
+  // last known chapter count per manga: {mangaId: {count, latestChId}}
+  getSnapshots(){try{return JSON.parse(localStorage.getItem('mhub_snaps')||'{}')}catch{return{}}},
+  saveSnapshots(o){localStorage.setItem('mhub_snaps',JSON.stringify(o))},
+  getDls(){try{return JSON.parse(localStorage.getItem('mhub_dls')||'[]')}catch{return[]}},
+  saveDls(a){localStorage.setItem('mhub_dls',JSON.stringify(a))},
+  // read chapters: Set of "sourceId__mangaId__chapterId"
+  getRead(){try{return new Set(JSON.parse(localStorage.getItem('mhub_read')||'[]'))}catch{return new Set()}},
+  saveRead(s){localStorage.setItem('mhub_read',JSON.stringify([...s]))},
+  readKey(srcId,mangaId,chId){return srcId+'$$'+mangaId+'$$'+chId},
+};
+const allSrc=()=>[...BUILTIN,...S.getSrc()];
+
+// ═══════════════════════════════ SOURCE ENGINE ═══════════════════════════════
+const loadedSources={};
+async function loadSource(source){
+  if(loadedSources[source.id])return loadedSources[source.id];
+  let html;
+  // SECURITY: validate file path before fetching
+  const _sf = source.file;
+  if(/\.\.|^https?:\/\/|^\/\//i.test(_sf))
+    throw new Error('Source path rejected: external or traversal paths not allowed');
+  try{const r=await fetch(_sf,{credentials:'omit'});if(!r.ok)throw new Error('HTTP '+r.status);html=await r.text();}
+  catch(e){throw new Error('Cannot load "'+_sf+'". ('+e.message+')');}
+  const m=html.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
+  if(!m)throw new Error('"'+source.file+'" has no <script> tag');
+  // SECURITY: fakeWindow gets only safe globals; real window is not exposed
+  const fakeWindow={
+    // Source code may call fetch, encodeURIComponent, JSON, etc.
+    fetch: (...a)=>{
+      // Block fetches to non-http(s) protocols
+      const url=String(a[0]||'');
+      if(!/^https?:\/\//i.test(url)&&!url.startsWith('/'))
+        return Promise.reject(new Error('Source fetch blocked: '+url));
+      return fetch(...a);
+    },
+    encodeURIComponent,
+    decodeURIComponent,
+    encodeURI,
+    decodeURI,
+    JSON,
+    Math,
+    Date,
+    parseInt,
+    parseFloat,
+    isNaN,
+    isFinite,
+    String,
+    Number,
+    Boolean,
+    Array,
+    Object,
+    Promise,
+    setTimeout,
+    clearTimeout,
+    console: {log:()=>{},warn:()=>{},error:()=>{}},
+  };
+  try{new Function('window',m[1])(fakeWindow);}
+  catch(e){throw new Error('Source error: '+e.message);}
+  if(!fakeWindow.__SOURCE__)throw new Error('"'+source.file+'" must set window.__SOURCE__');
+  loadedSources[source.id]=fakeWindow.__SOURCE__;
+  return fakeWindow.__SOURCE__;
+}
+async function callSource(sourceId,method,params={}){
+  const source=allSrc().find(s=>s.id===sourceId);
+  if(!source)throw new Error('Source not found: '+sourceId);
+  const src=await loadSource(source);
+  if(method==='MANIFEST')return src.MANIFEST||{};
+  const fn=src[method];if(!fn)throw new Error('Method not found: '+method);
+  return fn(params);
+}
+
+// ═══════════════════════════════ PAGE NAVIGATION ═══════════════════════════════
+let curPage='library';
+function switchPage(p){
+  curPage=p;
+  ['library','updates','history','browse','more'].forEach(n=>{
+    const pg=document.getElementById('page-'+n);
+    pg.style.display=n===p?'flex':'none';
+    document.getElementById('bnav-'+n).classList.toggle('on',n===p);
+  });
+  if(p==='library')renderLibrary();
+  else if(p==='updates'){ renderUpdates(); }
+  else if(p==='history')renderHistory();
+  else if(p==='browse')renderBrowseHome();
+}
+
+function showSubPage(id){document.getElementById(id).style.display='flex';}
+function closeSubPage(id){document.getElementById(id).style.display='none';}
+function showDownloadsPage(){
+  showSubPage('page-downloads');
+  renderDlPage();
+}
+function renderDlPage(){
+  const dls=S.getDls();
+  const content=document.getElementById('dl-page-content');
+  if(!dls.length){
+    content.innerHTML=`<div class="empty-state"><div class="empty-face">(  ̄へ ̄)</div><div class="empty-label">No downloads yet</div><div class="empty-sub">Download chapters from the reader to access them offline</div></div>`;
+    return;
+  }
+  content.innerHTML=dls.map((d,i)=>`
+    <div class="hist-item" style="cursor:pointer" onclick="openOfflineChapter('${sanitizeId(d.key)}')">
+      ${d.cover?`<img class="hist-thumb" src="${sanitizeUrl(d.cover)}" onerror="this.style.display='none'">`:`<div class="hist-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px">📖</div>`}
+      <div class="hist-info">
+        <div class="hist-title">${esc(d.mangaTitle)}</div>
+        <div class="hist-ch">Chapter ${esc(String(d.chapter))}${d.chTitle?' — '+esc(d.chTitle):''}</div>
+        <div style="font-size:10px;color:#4ade80;margin-top:3px">📦 ${d.pageCount||'?'} pages · ${relTime(d.savedAt)}</div>
+      </div>
+      <button class="hist-rm" onclick="event.stopPropagation();deleteDl('${sanitizeId(d.key)}')" title="Delete">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      </button>
+    </div>`).join('');
+}
+async function openOfflineChapter(key){
+  // Load pages from IndexedDB and open reader directly
+  let rec=null;
+  try{ rec=await idbGet(key); }catch(e){}
+  if(!rec||!rec.pages||!rec.pages.length){
+    showToast('Offline data not found',true); return;
+  }
+  const dl=S.getDls().find(d=>d.key===key);
+  if(!dl){ showToast('Download info missing',true); return; }
+  // Build a minimal B context so the reader works
+  B.sourceId=dl.sourceId;
+  B.pages=rec.pages;
+  B.manga={id:dl.mangaId,title:dl.mangaTitle,cover:dl.cover,coverSmall:dl.cover};
+  // Build a single-chapter list so prev/next buttons work correctly
+  B.chapters=[{id:dl.chapterId,chapter:dl.chapter,title:dl.chTitle,pages:rec.pages.length}];
+  B.chIdx=0;
+  // Open reader directly — no network call
+  closeSubPage('page-downloads');
+  const rv=document.getElementById('reader-view');
+  rv.classList.add('open');
+  if(!rv._touchReady){ rdrInitTouch(); rv._touchReady=true; }
+  setTimeout(initDoubleTapZoom,100);
+  rdrShowUI(true);
+  renderReader();
+  rdrAutoHide();
+  showToast('📦 Reading offline');
+}
+function deleteDl(key){
+  if(!confirm('Delete this download?')) return;
+  S.saveDls(S.getDls().filter(d=>d.key!==key));
+  idbDel(key).catch(()=>{});
+  renderDlPage();
+  if(B.manga&&B.chapters.length) renderDetail();
+  showToast('Download deleted');
+}
+function showSettingsPage(){
+  showSubPage('page-settings');
+  // Show/hide FS support warning
+  const notSupported=document.getElementById('fs-not-supported');
+  const pickBtn=document.getElementById('fs-pick-btn');
+  if(!FS_SUPPORTED){
+    if(notSupported) notSupported.style.display='block';
+    if(pickBtn){ pickBtn.disabled=true; pickBtn.style.opacity='.4'; }
+  }
+  updateStorageUI();
+  // Calculate storage usage
+  calcStorageUsage();
+}
+async function calcStorageUsage(){
+  const el=document.getElementById('storage-usage');
+  if(!el) return;
+  try{
+    if(navigator.storage && navigator.storage.estimate){
+      const {usage,quota}=await navigator.storage.estimate();
+      const usedMB=(usage/1048576).toFixed(1);
+      const quotaMB=(quota/1048576).toFixed(0);
+      const pct=Math.round(usage/quota*100);
+      const dlCount=S.getDls().length;
+      el.innerHTML=`<span style="color:var(--ac);font-weight:500">${usedMB} MB</span> used of ${quotaMB} MB (${pct}%)<br><span style="color:var(--mu);font-size:11px">${dlCount} chapter${dlCount!==1?'s':''} downloaded</span>`;
+    } else {
+      const dlCount=S.getDls().length;
+      el.textContent=dlCount+' chapter'+(dlCount!==1?'s':'')+' downloaded';
+    }
+  }catch(e){ el.textContent='Unable to calculate'; }
+}
+function openMenu(){document.getElementById('ov-menu').classList.add('open');}
+function closeMenu(){document.getElementById('ov-menu').classList.remove('open');}
+
+// ═══════════════════════════════ LIBRARY ═══════════════════════════════
+let activeCatId='all';
+let libSearchVal='';
+let libSearchVisible=false;
+
+function renderLibrary(){
+  const cats=S.getCats(),lib=S.getLib();
+  // Build tabs
+  const tabsRow=document.getElementById('lib-tabs-row');
+  const allTab=`<button class="ctab${activeCatId==='all'?' on':''}" onclick="setLibCat('all')">Default</button>`;
+  const catTabs=cats.map(c=>`<button class="ctab${activeCatId===c.id?' on':''}" onclick="setLibCat('${sanitizeId(c.id)}')">${esc(c.name)}</button>`).join('');
+  tabsRow.innerHTML=allTab+catTabs;
+  // Content
+  renderLibContent();
+  updateBrowseBadge();
+}
+
+function setLibCat(id){activeCatId=id;renderLibrary();}
+
+function renderLibContent(){
+  const lib=S.getLib(), cats=S.getCats();
+  const content=document.getElementById('lib-content');
+  const snaps=S.getSnapshots();
+  const readSet=S.getRead();
+  let items = activeCatId==='all' ? [...lib] : lib.filter(m=>m.catId===activeCatId);
+  items = sortAndFilterLib(items);
+  if(!items.length){
+    content.innerHTML=`<div class="empty-state"><div class="empty-face">(·O·;)</div><div class="empty-label">${activeCatId==='all'?'Library is empty':'Category is empty'}</div><div class="empty-sub">Add manga from Browse to fill your library</div></div>`;
+    return;
+  }
+  const sizes={small:'85px',medium:'110px',large:'155px'};
+  const colSize=sizes[libGrid]||'110px';
+  content.innerHTML=`<div class="lib-grid" style="grid-template-columns:repeat(auto-fill,minmax(${colSize},1fr))">${items.map(m=>{
+    // Unread count: total chapters - read chapters for this manga
+    const snap=snaps[m.id];
+    const totalChs=snap?.count||0;
+    // Count read chapters
+    const readCount=snap? [...readSet].filter(k=>k.startsWith(m.sourceId+'$$'+m.id+'$$')).length : 0;
+    const unread=Math.max(0,totalChs-readCount);
+    return `
+    <div class="lib-item" onclick="openFromLibrary('${sanitizeId(m.sourceId)}','${sanitizeId(m.id)}')">
+      ${m.cover?`<img class="lib-cover" src="${sanitizeUrl(m.cover)}" loading="lazy" onerror="this.style.display='none'">`:`<div class="lib-cover-empty">📖</div>`}
+      ${libShowBadge&&unread>0?`<div class="lib-badge">${unread>99?'99+':unread}</div>`:''}
+      ${libShowTitle?`<div class="lib-title">${esc(m.title)}</div>`:''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function _afterRender(){ setTimeout(initRipples,50); }
+
+function toggleLibSearch(){
+  libSearchVisible=!libSearchVisible;
+  document.getElementById('lib-search-bar').style.display=libSearchVisible?'block':'none';
+  if(libSearchVisible)document.getElementById('lib-search-inp').focus();
+  else{libSearchVal='';document.getElementById('lib-search-inp').value='';renderLibContent();}
+}
+function filterLib(v){libSearchVal=v;renderLibContent();_afterRender();}
+function clearLibSearch(){libSearchVal='';document.getElementById('lib-search-inp').value='';renderLibContent();}
+
+// ═══════════════════════════════ UPDATES ═══════════════════════════════
+function renderUpdates(){
+  const content=document.getElementById('updates-content');
+  const updates=S.getUpdates();
+  // last check label
+  const lastTs=parseInt(localStorage.getItem('mhub_last_check')||'0');
+  const lbl=document.getElementById('upd-last-check');
+  if(lbl) lbl.textContent=lastTs?'Last checked: '+relTime(lastTs):'Not checked yet — tap ↻ to check';
+  if(!updates.length){
+    content.innerHTML=`<div class="empty-state"><div class="empty-face">( ·O·;)</div><div class="empty-label">No new chapters</div><div class="empty-sub">Tap ↻ to check for updates for manga in your library</div></div>`;
+    return;
+  }
+  // Group by date
+  const groups={};
+  updates.forEach(u=>{
+    const d=new Date(u.seenAt).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    if(!groups[d]) groups[d]=[];
+    groups[d].push(u);
+  });
+  content.innerHTML=Object.entries(groups).map(([date,items])=>`
+    <div class="hist-date">${date}</div>
+    ${items.map(u=>`
+    <div class="update-item" onclick="openFromLibrary('${sanitizeId(u.sourceId)}','${sanitizeId(u.mangaId)}')">
+      ${u.cover?`<img class="update-thumb" src="${sanitizeUrl(u.cover)}" onerror="this.style.display='none'">`:`<div class="update-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px">📖</div>`}
+      <div class="update-info">
+        <div class="update-title">${esc(u.mangaTitle)}</div>
+        <div class="update-ch">Chapter ${esc(String(u.chapter))}${u.chTitle?' — '+esc(u.chTitle):''}</div>
+      </div>
+      <div class="update-time">${relTime(u.seenAt)}</div>
+    </div>`).join('')}`).join('');
+  // Update badge
+  updateNavBadge();
+}
+
+function clearUpdates(){
+  if(!confirm('Clear all updates?')) return;
+  S.saveUpdates([]);
+  localStorage.removeItem('mhub_last_check');
+  renderUpdates();
+  updateNavBadge();
+  showToast('Updates cleared');
+}
+
+function updateNavBadge(){
+  const n=S.getUpdates().length;
+  const b=document.getElementById('updates-badge');
+  if(!b) return;
+  b.style.display=n>0?'flex':'none';
+  b.textContent=n>99?'99+':n;
+}
+
+// ── CORE: check all library manga for new chapters ──
+let _checking=false;
+async function checkUpdates(manual=false){
+  if(_checking){ showToast('Already checking...',true); return; }
+  const lib=S.getLib();
+  if(!lib.length){
+    showToast('Add manga to library first',true);
+    return;
+  }
+  _checking=true;
+  // Spin the refresh icon
+  const btn=document.getElementById('upd-refresh-btn');
+  if(btn) btn.style.animation='spin .7s linear infinite';
+
+  const snaps=S.getSnapshots();
+  const existingUpdates=S.getUpdates();
+  const existingKeys=new Set(existingUpdates.map(u=>u.mangaId+'__'+u.chId));
+  const newUpdates=[];
+  // Deduplicate lib by mangaId (same manga may appear in multiple categories)
+  const seen=new Set();
+  const uniqueLib=lib.filter(m=>{ if(seen.has(m.id)) return false; seen.add(m.id); return true; });
+
+  let checked=0;
+  for(const libItem of uniqueLib){
+    try{
+      const source=allSrc().find(s=>s.id===libItem.sourceId);
+      if(!source) continue;
+      await loadSource(source);
+      const chapters=await callSource(libItem.sourceId,'getChapters',{id:libItem.id,lang:'en'});
+      if(!chapters||!chapters.length) continue;
+      const snap=snaps[libItem.id]||{count:0,latestChId:null};
+      // Find chapters newer than the snapshot
+      const newChs=chapters.filter(ch=>{
+        // A chapter is "new" if it wasn't in the last snapshot
+        const k=libItem.id+'__'+ch.id;
+        if(existingKeys.has(k)) return false; // already in feed
+        if(!snap.latestChId) return false;    // first time — no baseline yet
+        // Compare by index: chapters array is ordered desc, snap.count was the total
+        return chapters.length > snap.count;
+      });
+      // More precisely: new = chapters that appear before the snapshot baseline
+      // We track count. Any chapter at index < (chapters.length - snap.count) is new
+      const newCount=chapters.length - snap.count;
+      if(snap.count>0 && newCount>0){
+        // Take the top newCount chapters (most recent first)
+        const freshChs=chapters.slice(0,newCount);
+        freshChs.forEach(ch=>{
+          const k=libItem.id+'__'+ch.id;
+          if(!existingKeys.has(k)){
+            newUpdates.push({
+              mangaId:libItem.id,
+              sourceId:libItem.sourceId,
+              mangaTitle:libItem.title,
+              cover:libItem.cover||'',
+              chapter:ch.chapter,
+              chTitle:ch.title||'',
+              chId:ch.id,
+              seenAt:Date.now()
+            });
+            existingKeys.add(k);
+          }
+        });
+      }
+      // Always update snapshot
+      snaps[libItem.id]={count:chapters.length, latestChId:chapters[0]?.id||null};
+      checked++;
+    }catch(e){ /* skip failed sources */ }
+  }
+
+  S.saveSnapshots(snaps);
+  if(newUpdates.length){
+    S.saveUpdates([...newUpdates,...existingUpdates]);
+    showToast(`✓ ${newUpdates.length} new chapter${newUpdates.length>1?'s':''} found`);
+  } else if(manual){
+    showToast('✓ No new chapters');
+  }
+  localStorage.setItem('mhub_last_check',Date.now().toString());
+  _checking=false;
+  if(btn) btn.style.animation='';
+  renderUpdates();
+  updateNavBadge();
+}
+
+// ═══════════════════════════════ HISTORY ═══════════════════════════════
+function renderHistory(){
+  const hist=S.getHist();
+  const content=document.getElementById('history-content');
+  if(!hist.length){
+    content.innerHTML=`<div class="empty-state"><div class="empty-face">ヾ(•ω•\`)o</div><div class="empty-label">History is empty</div><div class="empty-sub">Chapters you read will appear here</div></div>`;
+    return;
+  }
+  // One card per manga, sorted by readAt desc (already is — newest first)
+  // Group by date for display
+  const groups={};
+  hist.forEach(h=>{
+    const key=new Date(h.readAt).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    if(!groups[key])groups[key]=[];
+    groups[key].push(h);
+  });
+  content.innerHTML=Object.entries(groups).map(([date,items])=>`
+    <div class="hist-date">${date}</div>
+    ${items.map(h=>`
+    <div class="hist-item" onclick="openFromLibrary('${sanitizeId(h.sourceId)}','${sanitizeId(h.mangaId)}')">
+      ${h.cover?`<img class="hist-thumb" src="${sanitizeUrl(h.cover)}" onerror="this.style.display='none'">`:`<div class="hist-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px">📖</div>`}
+      <div class="hist-info">
+        <div class="hist-title">${esc(h.mangaTitle)}</div>
+        <div class="hist-ch">Chapter ${esc(String(h.chapter))}${h.chTitle?' — '+esc(h.chTitle):''}</div>
+      </div>
+      <div class="hist-time">${relTime(h.readAt)}</div>
+      <button class="hist-rm" onclick="removeHistory('${sanitizeId(h.mangaId)}',event)" title="Remove">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>`).join('')}`).join('');
+}
+function removeHistory(mangaId,e){
+  e.stopPropagation();
+  S.saveHist(S.getHist().filter(h=>h.mangaId!==mangaId));
+  renderHistory();
+}
+function clearHistory(){if(!confirm('Clear all history?'))return;S.saveHist([]);renderHistory();showToast('History cleared');}
+
+// ═══════════════════════════════ BROWSE ═══════════════════════════════
+let B={sourceId:null,lang:'en',tab:'popular',items:[],page:1,hasNext:false,
+  searchQuery:'',searchItems:[],searchPage:1,searchHasNext:false,
+  manga:null,chapters:[],detExpanded:false,chIdx:0,pages:[],view:'home'};
+let searchTimer=null;
+
+function renderBrowseHome(){
+  const sources=allSrc();
+  document.getElementById('browse-home').style.display='flex';
+  document.getElementById('browse-detail').style.display='none';
+  document.getElementById('manga-detail').style.display='none';
+  // reader closed via classList
+  const wrap=document.getElementById('src-list-wrap');
+  let html='<div class="src-list">';
+  html+='<div class="browse-src-hdr">Installed sources</div>';
+  html+=sources.map(s=>`
+    <div class="src-row" onclick="openSource('${sanitizeId(s.id)}')">
+      <div class="src-ico">${s.icon||'📖'}</div>
+      <div class="src-info">
+        <div class="src-name">${esc(s.name)}</div>
+        <div class="src-lang">${esc(s.langs||'Multi')}</div>
+      </div>
+      ${s.builtin?`<div class="src-badge">Built-in</div>`:
+        `<button onclick="removeSource('${sanitizeId(s.id)}',event)" style="background:none;border:none;color:#555;cursor:pointer;font-size:20px;padding:4px 6px;border-radius:50%;transition:color .15s" onmouseenter="this.style.color='#ff6b6b'" onmouseleave="this.style.color='#555'">×</button>`}
+    </div>`).join('');
+  html+=`<div class="src-add-row" onclick="openSourceModal()"><div style="width:40px;height:40px;border-radius:10px;border:1px dashed currentColor;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">+</div><div style="font-size:14px">Add source…</div></div>`;
+  html+='</div>';
+  wrap.innerHTML=html;
+  updateBrowseBadge();
+}
+
+function updateBrowseBadge(){
+  const n=allSrc().length;
+  const b=document.getElementById('browse-badge');
+  if(n>0){b.textContent=n;b.style.display='flex';}else b.style.display='none';
+}
+
+async function openSource(sourceId){
+  const source=allSrc().find(s=>s.id===sourceId);
+  if(!source)return;
+  B.sourceId=sourceId;B.lang='en';B.tab='popular';B.items=[];B.page=1;B.view='home';B.searchQuery='';
+  document.getElementById('browse-src-name').textContent=source.name;
+  document.getElementById('browse-src-icon').textContent=source.icon||'📖';
+  document.getElementById('search-inp').value='';
+  document.getElementById('search-clear').style.display='none';
+  document.getElementById('browse-home').style.display='none';
+  document.getElementById('browse-detail').style.display='flex';
+  document.getElementById('manga-detail').style.display='none';
+  // reader closed via classList
+  showBrowseSpinner();
+  try{await loadSource(source);await browseLoadHome(true);}catch(e){showBrowseError(e.message);}
+}
+function closeBrowseDetail(){
+  document.getElementById('browse-home').style.display='flex';
+  document.getElementById('browse-detail').style.display='none';
+}
+async function browseLoadHome(reset=false){
+  if(reset){B.items=[];B.page=1;showBrowseSpinner();}
+  try{
+    const fn=B.tab==='popular'?'getPopular':'getLatest';
+    const r=await callSource(B.sourceId,fn,{page:B.page,lang:B.lang});
+    B.items=reset?r.items:[...B.items,...r.items];B.hasNext=r.hasNext;
+    renderMangaGrid();
+  }catch(e){showBrowseError(e.message);}
+}
+function renderMangaGrid(){
+  const cards=B.items.map(m=>`
+    <div class="mc" onclick="openMangaDetail('${sanitizeId(m.id)}')">
+      <div class="mc-img">${m.cover?`<img src="${sanitizeUrl(m.cover)}" loading="lazy">`:`<div class="mc-nimg">📖</div>`}${m.status?`<div class="mc-status ${m.status}">${m.status}</div>`:''}</div>
+      <div class="mc-title">${esc(m.title)}</div>
+    </div>`).join('');
+  let html=`<div class="mgrid">${cards||'<div style="grid-column:1/-1;padding:40px;text-align:center;color:#555">No results</div>'}</div>`;
+  if(B.hasNext)html+=`<div style="display:flex;justify-content:center;padding:8px 0 24px"><button class="btn btn-cancel" onclick="browseLoadMore()" style="font-size:13px;padding:10px 28px">Load more</button></div>`;
+  document.getElementById('browse-content').innerHTML=html;
+  setTimeout(initRipples,50);
+}
+async function browseLoadMore(){B.page++;await browseLoadHome(false);}
+function browseSwitchTab(t){
+  B.tab=t;B.searchQuery='';document.getElementById('search-inp').value='';document.getElementById('search-clear').style.display='none';
+  document.getElementById('brtab-pop').className='brtab'+(t==='popular'?' on':'');
+  document.getElementById('brtab-lat').className='brtab'+(t==='latest'?' on':'');
+  browseLoadHome(true);
+}
+function browseChangeLang(l){B.lang=l;browseLoadHome(true);}
+function onSearchInput(v){
+  document.getElementById('search-clear').style.display=v?'block':'none';
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(()=>{
+    const q=v.trim();B.searchQuery=q;
+    if(q){B.searchItems=[];B.searchPage=1;showBrowseSpinner('Searching...');doSearch(true);}
+    else{renderMangaGrid();}
+  },400);
+}
+function clearSearch(){document.getElementById('search-inp').value='';document.getElementById('search-clear').style.display='none';B.searchQuery='';renderMangaGrid();}
+async function doSearch(reset=false){
+  try{
+    const r=await callSource(B.sourceId,'search',{query:B.searchQuery,page:B.searchPage,lang:B.lang});
+    B.searchItems=reset?r.items:[...B.searchItems,...r.items];B.searchHasNext=r.hasNext;
+    const cards=B.searchItems.map(m=>`
+      <div class="mc" onclick="openMangaDetail('${sanitizeId(m.id)}')">
+        <div class="mc-img">${m.cover?`<img src="${sanitizeUrl(m.cover)}" loading="lazy">`:`<div class="mc-nimg">📖</div>`}</div>
+        <div class="mc-title">${esc(m.title)}</div>
+      </div>`).join('');
+    let html=`<div style="padding:10px 12px 2px;font-size:13px;color:var(--mu)">"${esc(B.searchQuery)}"</div>`;
+    html+=`<div class="mgrid">${cards||'<div style="grid-column:1/-1;padding:40px;text-align:center;color:#555">No results</div>'}</div>`;
+    if(B.searchHasNext)html+=`<div style="display:flex;justify-content:center;padding:8px 0 24px"><button class="btn btn-cancel" onclick="searchMore()">Load more</button></div>`;
+    document.getElementById('browse-content').innerHTML=html;
+  }catch(e){showBrowseError(e.message);}
+}
+function searchMore(){B.searchPage++;doSearch(false);}
+
+// ── DETAIL ──
+async function openMangaDetail(id){
+  document.getElementById('browse-detail').style.display='none';
+  document.getElementById('manga-detail').style.display='flex';
+  document.getElementById('det-topbar-title').textContent='';
+  document.getElementById('det-content').innerHTML='<div class="spw"><div class="sp"></div></div>';
+  try{
+    const[manga,chapters]=await Promise.all([
+      callSource(B.sourceId,'getDetails',{id}),
+      callSource(B.sourceId,'getChapters',{id,lang:B.lang})
+    ]);
+    B.manga=manga;B.chapters=chapters;B.detExpanded=false;
+    document.getElementById('det-topbar-title').textContent=manga.title;
+    // Snapshot baseline: if no snapshot exists yet, set it now
+    const snaps=S.getSnapshots();
+    if(!snaps[manga.id]){
+      snaps[manga.id]={count:chapters.length,latestChId:chapters[0]?.id||null};
+      S.saveSnapshots(snaps);
+    }
+    renderDetail();
+  }catch(e){document.getElementById('det-content').innerHTML=`<div class="spw"><div style="font-size:28px">⚠</div><div class="sp-msg" style="color:#ff8a8a">${e.message}</div></div>`;}
+}
+function renderDetail(){
+  const m=B.manga,chs=B.chapters;
+  const fmt=d=>d?new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):'';
+  const tags=m.tags.slice(0,6).map(t=>`<span class="det-badge">${esc(t)}</span>`).join('');
+  const dls=S.getDls();
+  const readSet=S.getRead();
+  const chList=chs.length?chs.map((ch,i)=>{
+    const dlKey=B.sourceId+'__'+ch.id;
+    const isDl=dls.some(d=>d.key===dlKey);
+    const readKey=S.readKey(B.sourceId,B.manga.id,ch.id);
+    const isRead=readSet.has(readKey);
+    return `
+    <div class="ch-item${isRead?' read':''}" data-chi="${i}" onclick="chItemClick(event,${i})">
+      <div class="ch-sel" id="chsel-${i}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="#000" stroke="#000" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="ch-num">Ch.${esc(String(ch.chapter))}</div>
+      <div class="ch-info">
+        <div style="font-size:13px;font-weight:500">${ch.title?esc(ch.title):'Chapter '+esc(String(ch.chapter))}</div>
+        <div class="ch-sub" style="display:flex;align-items:center;gap:6px">
+          ${isDl?'<span style="color:#4ade80;font-size:10px">📦</span>':''}
+          ${isRead?'<span style="color:#555;font-size:10px">Read</span>':''}
+          ${ch.publishAt?`<span>${fmt(ch.publishAt)}</span>`:''}
+        </div>
+      </div>
+      <button class="ch-dl${isDl?' dl-done':''}" onclick="event.stopPropagation();downloadChapter(${i},'${esc(m.title||'')}')" title="${isDl?'Downloaded':'Download'}">
+        ${isDl
+          ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`
+          : `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`}
+      </button>
+    </div>`;
+  }).join('')
+  :`<div class="empty-state" style="padding:30px"><div class="empty-face" style="font-size:32px">(·_·)</div><div class="empty-label">No chapters available</div></div>`;
+  document.getElementById('det-content').innerHTML=`
+    <div class="det-wrap">
+      <div class="det-hero">
+        <div class="det-cover">${m.cover?`<img src="${sanitizeUrl(m.cover)}" alt="${esc(m.title)}">`:`<div style="height:170px;display:flex;align-items:center;justify-content:center;font-size:40px">📖</div>`}</div>
+        <div style="flex:1;min-width:0">
+          <div class="det-title">${esc(m.title)}</div>
+          <div class="det-meta">${m.author?`<div><b>${esc(m.author)}</b></div>`:''}${m.artist&&m.artist!==m.author?`<div>Art: <b>${esc(m.artist)}</b></div>`:''}</div>
+          <div class="det-badges">${m.status?`<span class="det-badge ${m.status}">${m.status}</span>`:''}${m.year?`<span class="det-badge">${m.year}</span>`:''}${tags}</div>
+        </div>
+      </div>
+      ${m.description?`
+        <p class="det-desc${B.detExpanded?' open':''}">${esc(m.description)}</p>
+        ${m.description.length>200?`<button class="det-desc-btn" onclick="toggleDesc()">${B.detExpanded?'Show less ▲':'Show more ▼'}</button>`:''}
+      `:''}
+      <div class="det-actions">
+        <button class="det-action fill" onclick="openAddLib(B.manga)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          Add to library
+        </button>
+        ${chs.length?`<button class="det-action outline" onclick="openReader(0)">▶ Read first</button>`:''}
+      </div>
+      <div style="font-size:14px;font-weight:500;margin:20px 0 4px;padding-bottom:12px;border-bottom:1px solid var(--bd)">${chs.length} chapters</div>
+      ${chList}
+    </div>`;
+}
+function toggleDesc(){B.detExpanded=!B.detExpanded;renderDetail();}
+function closeMangaDetail(){
+  document.getElementById('manga-detail').style.display='none';
+  document.getElementById('browse-detail').style.display='flex';
+}
+
+// ── READER ──
+async function openReader(idx){
+  B.chIdx=idx;
+  document.getElementById('manga-detail').style.display='none';
+  const rv=document.getElementById('reader-view');
+  rv.classList.add('open');
+  // init touch only once
+  if(!rv._touchReady){ rdrInitTouch(); rv._touchReady=true; }
+  setTimeout(initDoubleTapZoom,100);
+  document.getElementById('rdr-scroll').innerHTML='<div class="spw"><div class="sp"></div></div>';
+  rdrShowUI(false);
+  try{
+    const ch=B.chapters[idx];
+    const dlKey=B.sourceId+'__'+ch.id;
+    let pages=null;
+    // Try offline storage first
+    if(S.getDls().find(d=>d.key===dlKey)){
+      try{
+        const rec=await idbGet(dlKey);
+        if(rec&&rec.pages&&rec.pages.length){
+          pages=rec.pages;
+          showToast('📦 Reading offline');
+        }
+      }catch(e){/* fallback to network */}
+    }
+    if(!pages) pages=await callSource(B.sourceId,'getPages',{chapterId:ch.id});
+    B.pages=pages;
+    renderReader();
+    addHistory(idx);
+  }catch(e){
+    document.getElementById('rdr-scroll').innerHTML=`<div class="spw"><div style="font-size:28px">⚠</div><div class="sp-msg" style="color:#ff8a8a">${e.message}</div></div>`;
+  }
+}
+// ── READER STATE ──
+let rdrMode=S.getRdrMode(); // persisted in localStorage
+let rdrPendingMode='webtoon';
+let rdrUIVisible=true;
+let rdrUITimer=null;
+let rdrObserver=null;
+let rdrPaged=false; // true when ltr/rtl/vertical
+let rdrCurrentPage=1;
+
+function renderReader(){
+  const ch=B.chapters[B.chIdx];
+  document.getElementById('rdr-manga-title').textContent=B.manga?.title||'';
+  document.getElementById('rdr-ch-label').textContent='Chapter '+esc(String(ch.chapter))+(ch.title?' · '+esc(ch.title):'');
+  document.getElementById('rdr-pg-tot').textContent = B.pages.length || '?';
+  document.getElementById('rdr-slider').max = B.pages.length;
+  document.getElementById('rdr-prev-ch').disabled=B.chIdx>=B.chapters.length-1;
+  document.getElementById('rdr-next-ch').disabled=B.chIdx<=0;
+  rdrCurrentPage=1;
+  applyReaderMode();
+  rdrShowUI(true);
+  rdrAutoHide();
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  APPLY MODE — rebuilds DOM + scroll container for current rdrMode
+// ─────────────────────────────────────────────────────────────────
+function applyReaderMode(){
+  const scroll = document.getElementById('rdr-scroll');
+  const labels = {ltr:'Left to right',rtl:'Right to left',vertical:'Vertical',webtoon:'Long strip','webtoon-gaps':'Long strip gaps'};
+  document.getElementById('rdr-mode-label').textContent = labels[rdrMode]||'Long strip';
+  document.querySelectorAll('.rdr-mode-btn').forEach(b=>b.classList.toggle('sel',b.dataset.mode===rdrMode));
+  rdrPaged = ['ltr','rtl','vertical'].includes(rdrMode);
+
+  // Disconnect old observer
+  if(rdrObserver){ rdrObserver.disconnect(); rdrObserver=null; }
+
+  // Reset scroll classes
+  scroll.className = 'rdr-scroll mode-'+rdrMode;
+  // Enable/disable tap zones
+  document.getElementById('reader-view').classList.toggle('paged', rdrPaged);
+  // Fix scroll touch in webtoon: allow natural scroll through tap zones
+  scroll.style.touchAction = rdrPaged ? 'none' : 'pan-y';
+
+  if(rdrPaged){
+
+    if(rdrMode==='ltr' || rdrMode==='rtl'){
+      // ── HORIZONTAL: pure JS transform, no native scroll ──
+      scroll.style.overflow = 'hidden';
+      // Build track + pages
+      // RTL: pages laid out in reverse so page 0 appears on the right
+      const orderedPages = rdrMode === 'rtl'
+        ? [...B.pages].reverse()
+        : B.pages;
+      const pagesHTML = orderedPages.map((p, pos) => {
+        const logicalIdx = rdrMode === 'rtl' ? B.pages.length - 1 - pos : pos;
+        return `<div class="rpage" data-i="${logicalIdx}"><img src="${sanitizeUrl(p.url)}" loading="${pos<3?'eager':'lazy'}" draggable="false"/></div>`;
+      }).join('');
+      scroll.innerHTML = `<div class="rdr-h-track" id="rdr-h-track">${pagesHTML}</div>`;
+      _hIdx = 0;
+      _hSetPage(0, false);
+
+    } else {
+      // ── VERTICAL PAGED: scroll-snap ──
+      scroll.style.overflowY = 'auto';
+      scroll.style.overflowX = 'hidden';
+      scroll.innerHTML = B.pages.map((p,i)=>`<div class="rpage" data-i="${i}"><img src="${sanitizeUrl(p.url)}" loading="${i<3?'eager':'lazy'}" draggable="false"/></div>`).join('');
+      rdrObserver = new IntersectionObserver(entries=>{
+        entries.forEach(e=>{
+          if(e.intersectionRatio > 0.5){
+            const pg = +e.target.dataset.i + 1;
+            if(pg !== rdrCurrentPage){
+              rdrCurrentPage = pg;
+              document.getElementById('rdr-pg-cur').textContent = pg;
+              document.getElementById('rdr-slider').value = pg;
+            }
+          }
+        });
+      },{root:scroll, threshold:0.5});
+      scroll.querySelectorAll('.rpage').forEach(p=>rdrObserver.observe(p));
+      scroll.scrollTop = 0;
+    }
+
+  } else {
+    // ── WEBTOON: free vertical scroll ──
+    const isGaps = rdrMode==='webtoon-gaps';
+    scroll.style.overflowY = 'auto';
+    scroll.style.overflowX = 'hidden';
+    // Landscape: attach horizontal→vertical scroll interceptor
+    _detachLandscapeWebtoonScroll();
+    if(_rdrRot==='landscape') _attachLandscapeWebtoonScroll();
+
+    const wrap = document.createElement('div');
+    wrap.className = 'rpage-wrap' + (isGaps?' gaps':'');
+    wrap.id = 'rpage-wrap';
+    // Progressive loading: load first 3 eagerly, rest lazy
+    wrap.innerHTML = B.pages.map((p,i)=>`<div class="rpage" data-i="${i}"><img src="${sanitizeUrl(p.url)}" loading="${i<3?'eager':'lazy'}" draggable="false"/></div>`).join('');
+    scroll.innerHTML = '';
+    scroll.appendChild(wrap);
+
+    // ── IntersectionObserver for smooth page counter tracking ──
+    rdrObserver = new IntersectionObserver(entries=>{
+      // Pick the entry with highest intersection ratio
+      let best = null, bestRatio = 0;
+      entries.forEach(e=>{ if(e.intersectionRatio > bestRatio){ bestRatio=e.intersectionRatio; best=e; }});
+      if(best && bestRatio > 0.15){
+        const pg = +best.target.dataset.i + 1;
+        if(pg !== rdrCurrentPage){
+          rdrCurrentPage = pg;
+          document.getElementById('rdr-pg-cur').textContent = pg;
+          document.getElementById('rdr-slider').value = pg;
+          onPageChange(pg);
+          preloadNextPages(pg-1,2);
+        }
+      }
+    },{root:scroll, threshold:[0.15, 0.5, 0.85]});
+    wrap.querySelectorAll('.rpage').forEach(p=>rdrObserver.observe(p));
+
+    scroll.scrollTop = 0;
+  }
+
+  // Init slider
+  document.getElementById('rdr-slider').value = 1;
+  document.getElementById('rdr-pg-cur').textContent = 1;
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────────────────────────────────
+function rdrGoToPage(idx, smooth=true){
+  const scroll = document.getElementById('rdr-scroll');
+  if(idx < 0) idx = 0;
+  if(idx >= B.pages.length) idx = B.pages.length-1;
+
+  if(rdrMode==='ltr' || rdrMode==='rtl'){
+    _hSetPage(idx, smooth);
+  } else if(rdrMode==='vertical'){
+    const page = scroll.querySelector(`.rpage[data-i="${idx}"]`);
+    if(page) page.scrollIntoView({behavior: smooth?'smooth':'auto', block:'start'});
+  } else {
+    // webtoon
+    const page = document.querySelector(`#rpage-wrap .rpage[data-i="${idx}"]`);
+    if(page) page.scrollIntoView({behavior: smooth?'smooth':'auto', block:'start'});
+  }
+  rdrCurrentPage = idx+1;
+  document.getElementById('rdr-pg-cur').textContent = rdrCurrentPage;
+  document.getElementById('rdr-slider').value = rdrCurrentPage;
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  HORIZONTAL PAGER — pure JS transform (mirrors Android ViewPager)
+// ─────────────────────────────────────────────────────────────────
+let _hIdx = 0; // current page index in horizontal mode
+
+function _hSetPage(idx, animated){
+  if(idx < 0) idx = 0;
+  if(idx >= B.pages.length) idx = B.pages.length - 1;
+  const track = document.getElementById('rdr-h-track');
+  if(!track) return;
+  _hIdx = idx;
+  const tr = animated ? 'transform .28s cubic-bezier(.25,.46,.45,.94)' : 'none';
+  track.style.webkitTransition = tr;
+  track.style.transition = tr;
+  // Physical position in DOM:
+  //   LTR: physPos = idx          (pages in normal order)
+  //   RTL: physPos = total-1-idx  (pages reversed, so page 0 is last in DOM)
+  const total = B.pages.length;
+  const physPos = rdrMode === 'rtl' ? (total - 1 - idx) : idx;
+  track.style.transform = `translateX(${-physPos * 100}%)`;
+  rdrCurrentPage = idx + 1;
+  document.getElementById('rdr-pg-cur').textContent = rdrCurrentPage;
+  document.getElementById('rdr-slider').value = rdrCurrentPage;
+  onPageChange(rdrCurrentPage);
+  if(rdrPaged) preloadNextPages(idx);
+}
+function rdrTapLeft(){
+  if(document.getElementById('rdr-mode-sheet').classList.contains('open')) return;
+  if(!rdrPaged){ rdrToggleUI(); return; }
+  if(rdrMode==='rtl') _rdrNext(); else _rdrPrev();
+}
+function rdrTapRight(){
+  if(document.getElementById('rdr-mode-sheet').classList.contains('open')) return;
+  if(!rdrPaged){ rdrToggleUI(); return; }
+  if(rdrMode==='rtl') _rdrPrev(); else _rdrNext();
+}
+function _rdrNext(){
+  if(rdrMode==='ltr'||rdrMode==='rtl'){
+    if(_hIdx < B.pages.length-1) _hSetPage(_hIdx+1, true);
+    else{ rdrShowChapterHint('next'); setTimeout(readerNext,350); }
+  } else {
+    if(rdrCurrentPage < B.pages.length) rdrGoToPage(rdrCurrentPage);
+    else readerNext();
+  }
+}
+function _rdrPrev(){
+  if(rdrMode==='ltr'||rdrMode==='rtl'){
+    if(_hIdx > 0) _hSetPage(_hIdx-1, true);
+    else{ rdrShowChapterHint('prev'); setTimeout(readerPrev,350); }
+  } else {
+    if(rdrCurrentPage > 1) rdrGoToPage(rdrCurrentPage-2);
+    else readerPrev();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  TOUCH — horizontal: ViewPager-style  |  vertical: native scroll
+// ─────────────────────────────────────────────────────────────────
+let _tx0=0, _ty0=0, _t0=0, _tScrolling=null;
+let _hDragging=false;
+let _ignoreSwipe=false;
+let _velSamples=[];   // [{x,t}] last N touchmove points for velocity
+
+function rdrInitTouch(){
+  const rv    = document.getElementById('reader-view');
+  const scroll= document.getElementById('rdr-scroll');
+
+  // Tap scroll area → toggle UI in webtoon
+  scroll.addEventListener('click', ()=>{ if(!rdrPaged) rdrToggleUI(); });
+
+  rv.addEventListener('touchstart', e=>{
+    const onUI = e.target.closest('#rdr-topbar,#rdr-btm,#rdr-mode-sheet,#rdr-rot-sheet,#rdr-settings-sheet,#rdr-sheet-ov');
+    _ignoreSwipe = !!onUI;
+    if(_ignoreSwipe) return;
+    // Remap touch coords to account for rotation
+    const t = _remapTouch(e.touches[0].clientX, e.touches[0].clientY);
+    _tx0 = t.x; _ty0 = t.y;
+    _t0  = e.timeStamp;
+    _tScrolling = null;
+    _hDragging  = false;
+    _velSamples = [{x:t.x, t:_t0}];
+  },{passive:true});
+
+  rv.addEventListener('touchmove', e=>{
+    if(_ignoreSwipe) return;
+    const t  = _remapTouch(e.touches[0].clientX, e.touches[0].clientY);
+    const cx = t.x, cy = t.y;
+    const adx = Math.abs(cx - _tx0);
+    const ady = Math.abs(cy - _ty0);
+
+    if(_tScrolling===null && (adx>6||ady>6))
+      _tScrolling = adx>ady ? 'h' : 'v';
+
+    _velSamples.push({x:cx, t:e.timeStamp});
+    if(_velSamples.length > 6) _velSamples.shift();
+
+    if((rdrMode==='ltr'||rdrMode==='rtl') && _tScrolling==='h'){
+      _hDragging = true;
+      const track = document.getElementById('rdr-h-track');
+      if(!track) return;
+      track.style.transition = 'none';
+      const dx = cx - _tx0;
+      const total = B.pages.length;
+      const physPos = rdrMode === 'rtl' ? (total - 1 - _hIdx) : _hIdx;
+      let pct = (dx / scroll.clientWidth) * 100;
+      const atFirst = _hIdx === 0;
+      const atLast  = _hIdx === total - 1;
+      const resist = rdrMode === 'rtl'
+        ? (atFirst && dx < 0) || (atLast && dx > 0)
+        : (atFirst && dx > 0) || (atLast && dx < 0);
+      if(resist) pct *= 0.25;
+      const tf2 = `translateX(calc(${-physPos * 100}% + ${pct}%))`;
+      track.style.webkitTransform = tf2;
+      track.style.transform = tf2;
+    }
+  },{passive:true});
+
+  rv.addEventListener('touchend', e=>{
+    if(_ignoreSwipe){ _ignoreSwipe=false; return; }
+    const t  = _remapTouch(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    const dx = t.x - _tx0;
+    const dy = t.y - _ty0;
+    const W  = scroll.clientWidth;
+
+    // ── Velocity (computed from remapped samples) ──
+    let velX = 0;
+    if(_velSamples.length >= 2){
+      const a = _velSamples[0], b = _velSamples[_velSamples.length-1];
+      const dt = b.t - a.t;
+      if(dt > 0) velX = (b.x - a.x) / dt * 1000;
+    }
+
+    // ── LTR / RTL paged decision ──
+    if((rdrMode==='ltr'||rdrMode==='rtl') && _hDragging){
+      _hDragging = false;
+      const DIST = W * 0.25;
+      const VEL  = 400;
+      const MIN  = W * 0.04;
+      const isFling = Math.abs(velX) > VEL && Math.abs(dx) > MIN;
+      const isDrag  = Math.abs(dx) >= DIST;
+      if(isFling || isDrag){
+        const wentLeft = isFling ? (velX < 0) : (dx < 0);
+        const goNext   = rdrMode === 'ltr' ? wentLeft : !wentLeft;
+        if(goNext){
+          if(_hIdx < B.pages.length-1) _hSetPage(_hIdx+1, true);
+          else{ _hSetPage(_hIdx, true); rdrShowChapterHint('next'); setTimeout(readerNext,350); }
+        } else {
+          if(_hIdx > 0) _hSetPage(_hIdx-1, true);
+          else{ _hSetPage(_hIdx, true); rdrShowChapterHint('prev'); setTimeout(readerPrev,350); }
+        }
+      } else {
+        _hSetPage(_hIdx, true);
+      }
+      return;
+    }
+
+    // ── WEBTOON: chapter boundary swipe ──
+    if(!rdrPaged && _tScrolling==='v' && Math.abs(dy)>50){
+      const s = document.getElementById('rdr-scroll');
+      const atBottom = s.scrollTop >= s.scrollHeight - s.clientHeight - 60;
+      const atTop    = s.scrollTop <= 4;
+      if(atBottom && dy<0){ rdrShowChapterHint('next'); setTimeout(readerNext,400); }
+      if(atTop    && dy>0){ rdrShowChapterHint('prev'); setTimeout(readerPrev,400); }
+    }
+  },{passive:true});
+}
+
+function rdrShowChapterHint(dir){
+  const h=document.getElementById('rdr-swipe-hint');
+  if(!h)return;
+  h.textContent=dir==='next'?'▼ Next chapter':'▲ Previous chapter';
+  h.classList.add('show');
+  setTimeout(()=>h.classList.remove('show'),1200);
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  SLIDER
+// ─────────────────────────────────────────────────────────────────
+function rdrSliderInput(v){
+  document.getElementById('rdr-pg-cur').textContent=v;
+}
+function rdrSliderChange(v){
+  const idx=parseInt(v)-1;
+  if(rdrMode==='ltr'||rdrMode==='rtl') _hSetPage(idx,true);
+  else rdrGoToPage(idx, false);
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  UI VISIBILITY
+// ─────────────────────────────────────────────────────────────────
+function rdrToggleUI(){
+  rdrUIVisible?rdrHideUI():rdrShowUI(true);
+}
+function rdrShowUI(autoHide=false){
+  rdrUIVisible=true;
+  document.getElementById('rdr-topbar').classList.remove('hidden');
+  document.getElementById('rdr-btm').classList.remove('hidden');
+  if(autoHide)rdrAutoHide();
+}
+function rdrHideUI(){
+  rdrUIVisible=false;
+  document.getElementById('rdr-topbar').classList.add('hidden');
+  document.getElementById('rdr-btm').classList.add('hidden');
+  clearTimeout(rdrUITimer);
+}
+function rdrAutoHide(){
+  clearTimeout(rdrUITimer);
+  rdrUITimer=setTimeout(()=>{
+    const sheetOpen=document.getElementById('rdr-mode-sheet').classList.contains('open')
+                  ||document.getElementById('rdr-rot-sheet').classList.contains('open')
+                  ||document.getElementById('rdr-settings-sheet').classList.contains('open');
+    if(rdrUIVisible&&!sheetOpen) rdrHideUI();
+  },3500);
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  MODE SHEET
+// ─────────────────────────────────────────────────────────────────
+function openReadingModeSheet(){
+  clearTimeout(rdrUITimer);
+  rdrPendingMode=rdrMode;
+  document.querySelectorAll('.rdr-mode-btn').forEach(b=>b.classList.toggle('sel',b.dataset.mode===rdrPendingMode));
+  document.getElementById('rdr-mode-sheet').classList.add('open');
+  document.getElementById('rdr-sheet-ov').classList.add('open');
+}
+function closeReadingModeSheet(){
+  document.getElementById('rdr-mode-sheet').classList.remove('open');
+  // Only hide overlay if rot sheet is also closed
+  if(!document.getElementById('rdr-rot-sheet').classList.contains('open')){
+    document.getElementById('rdr-sheet-ov').classList.remove('open');
+  }
+  rdrAutoHide();
+}
+function selectReadMode(m){
+  rdrPendingMode=m;
+  document.querySelectorAll('.rdr-mode-btn').forEach(b=>b.classList.toggle('sel',b.dataset.mode===m));
+}
+function applyReadMode(){
+  rdrMode=rdrPendingMode;
+  S.saveRdrMode(rdrMode);
+  closeReadingModeSheet();
+  applyReaderMode();
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  CHAPTER NAV
+// ─────────────────────────────────────────────────────────────────
+function readerPrev(){if(B.chIdx<B.chapters.length-1)openReader(B.chIdx+1);}
+function readerNext(){if(B.chIdx>0)openReader(B.chIdx-1);}
+function closeReader(){
+  if(rdrObserver){rdrObserver.disconnect();rdrObserver=null;}
+  clearTimeout(rdrUITimer);
+  _resetRotation();
+  document.getElementById('reader-view').classList.remove('open');
+  document.getElementById('manga-detail').style.display='flex';
+}
+
+// ── ROTATION ──
+let _rdrRot='free';
+
+function openRotSheet(){
+  clearTimeout(rdrUITimer);
+  document.querySelectorAll('.rdr-rot-btn').forEach(b=>{
+    b.classList.toggle('sel', b.dataset.rot===_rdrRot);
+  });
+  document.getElementById('rdr-rot-sheet').classList.add('open');
+  document.getElementById('rdr-sheet-ov').classList.add('open');
+}
+function closeRotSheet(){
+  document.getElementById('rdr-rot-sheet').classList.remove('open');
+  document.getElementById('rdr-sheet-ov').classList.remove('open');
+  rdrAutoHide();
+}
+function closeAllRdrSheets(){
+  closeReadingModeSheet();
+  closeRotSheet();
+  closeRdrSettings();
+}
+function setRotation(mode){
+  _rdrRot = mode;
+  document.querySelectorAll('.rdr-rot-btn').forEach(b=>b.classList.toggle('sel',b.dataset.rot===mode));
+  const labels={free:'Rotate',portrait:'Portrait',landscape:'Landscape','reverse-portrait':'180°'};
+  const btn=document.getElementById('rdr-rotate-act');
+  if(btn) btn.querySelector('span').textContent=labels[mode]||'Rotate';
+
+  const inner = document.getElementById('rdr-inner');
+  const vw = window.innerWidth, vh = window.innerHeight;
+
+  switch(mode){
+    case 'free':
+    case 'portrait':
+      // No rotation
+      inner.style.webkitTransform = '';
+      inner.style.webkitTransform = '';
+    inner.style.transform = '';
+      inner.style.width     = '100%';
+      inner.style.height    = '100%';
+      inner.style.top       = '0';
+      inner.style.left      = '0';
+      break;
+
+    case 'landscape':
+      // Rotate inner wrapper 90° CW.
+      // The inner element is vw×vh before rotation.
+      // After 90° CW: visual W=vh, visual H=vw — matches the screen perfectly.
+      // But the pivot is center-center, so we need to compensate the position:
+      //   translateX shifts right by (vw-vh)/2
+      //   translateY shifts down  by (vh-vw)/2
+      // Combined as a single transform to avoid position fighting:
+      inner.style.width     = vh + 'px';   // will become visual width=vw after rotate
+      inner.style.height    = vw + 'px';   // will become visual height=vh after rotate
+      inner.style.top       = ((vh - vw) / 2) + 'px';
+      inner.style.left      = ((vw - vh) / 2) + 'px';
+      inner.style.webkitTransform = 'rotate(90deg)';
+      inner.style.transform = 'rotate(90deg)';
+      break;
+
+    case 'reverse-portrait':
+      // 180° — same size, just flipped
+      inner.style.width     = '100%';
+      inner.style.height    = '100%';
+      inner.style.top       = '0';
+      inner.style.left      = '0';
+      inner.style.webkitTransform = 'rotate(180deg)';
+      inner.style.transform = 'rotate(180deg)';
+      break;
+  }
+  // Re-attach webtoon landscape scroll if needed
+  _detachLandscapeWebtoonScroll();
+  if(mode==='landscape' && !rdrPaged) _attachLandscapeWebtoonScroll();
+}
+
+function applyScrollRotation(){} // compat stub
+
+// Reset rotation when closing reader
+function _resetRotation(){
+  const inner = document.getElementById('rdr-inner');
+  if(inner){
+    inner.style.webkitTransform = '';
+    inner.style.transform = '';
+    inner.style.width     = '100%';
+    inner.style.height    = '100%';
+    inner.style.top       = '0';
+    inner.style.left      = '0';
+  }
+  _rdrRot = 'free';
+  _landFill = false;
+  const inner2 = document.getElementById('rdr-inner');
+  if(inner2) inner2.classList.remove('land-fill');
+  const ft = document.getElementById('land-fill-toggle');
+  if(ft) ft.classList.remove('on');
+  const btn = document.getElementById('rdr-rotate-act');
+  if(btn) btn.querySelector('span').textContent = 'Rotate';
+}
+
+// Land fill toggle
+let _landFill = false;
+function toggleLandFill(btn){
+  _landFill = !_landFill;
+  btn.classList.toggle('on', _landFill);
+  document.getElementById('rdr-inner').classList.toggle('land-fill', _landFill);
+}
+
+// Legacy
+function rdrRotate(){ openRotSheet(); }
+
+// ── Remap touch coordinates for rotated reader ──
+function _remapTouch(clientX, clientY){
+  const vw = window.innerWidth, vh = window.innerHeight;
+  switch(_rdrRot){
+    case 'landscape':
+      // 90° CW: local X = screenY, local Y = vw - screenX
+      return { x: clientY, y: vw - clientX };
+    case 'reverse-portrait':
+      // 180°: flip both
+      return { x: vw - clientX, y: vh - clientY };
+    default:
+      return { x: clientX, y: clientY };
+  }
+}
+
+// ── Webtoon scroll in landscape (90°) ──
+// rdr-scroll is inside the rotated rdr-inner.
+// User physically swipes UP/DOWN on screen → these become LEFT/RIGHT in rdr-inner coords.
+// The rdr-inner's rdr-scroll won't respond to those because scroll direction is local.
+// Fix: intercept physical touch on rdr-scroll and convert horizontal drag → scrollTop.
+let _wl_x0=0, _wl_st0=0, _wl_active=false;
+
+function _attachLandscapeWebtoonScroll(){
+  const s = document.getElementById('rdr-scroll');
+  s.addEventListener('touchstart', _wlStart, {passive:true});
+  s.addEventListener('touchmove',  _wlMove,  {passive:false});
+  s.addEventListener('touchend',   _wlEnd,   {passive:true});
+}
+function _detachLandscapeWebtoonScroll(){
+  const s = document.getElementById('rdr-scroll');
+  s.removeEventListener('touchstart', _wlStart);
+  s.removeEventListener('touchmove',  _wlMove);
+  s.removeEventListener('touchend',   _wlEnd);
+}
+function _wlStart(e){
+  _wl_x0  = e.touches[0].clientX;
+  _wl_y0  = e.touches[0].clientY;
+  _wl_st0 = this.scrollTop;
+  _wl_active = true;
+}
+function _wlMove(e){
+  if(!_wl_active) return;
+  e.preventDefault();
+  // rotate(90deg) CW: the content's "down" direction maps to screen-RIGHT (+X).
+  // User swiping screen-LEFT (physDx < 0) = going UP visually = scrollTop decreases.
+  // User swiping screen-RIGHT (physDx > 0) = going DOWN visually = scrollTop increases.
+  // BUT: after the element is rotated, its internal scroll direction is:
+  //   local Y (scrollTop) = physical X on screen (because X and Y axes are swapped by 90° CW)
+  // So scrollTop should track physical clientX directly.
+  const physDx = e.touches[0].clientX - _wl_x0;
+  this.scrollTop = _wl_st0 + physDx;
+}
+function _wlEnd(){ _wl_active = false; }
+
+function _removeRotListeners(){} // no-op, remap approach needs no extra listeners
+
+// ── CROP ──
+let _cropOn = false;
+function rdrToggleCrop(btn){
+  _cropOn = !_cropOn;
+  const scroll = document.getElementById('rdr-scroll');
+  if(_cropOn){
+    scroll.classList.add('crop-on');
+    // Apply CSS filter to trim black borders
+    scroll.querySelectorAll('img').forEach(img=>{
+      img.style.filter='saturate(1)';
+      img.style.width='100%';
+      img.style.objectFit='cover';
+    });
+    if(btn) btn.classList.add('on');
+    showToast('✓ Crop borders on');
+  } else {
+    scroll.classList.remove('crop-on');
+    scroll.querySelectorAll('img').forEach(img=>{
+      img.style.filter='';
+      img.style.width='100%';
+      img.style.objectFit='contain';
+    });
+    if(btn) btn.classList.remove('on');
+    showToast('Crop borders off');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  READER SETTINGS SHEET
+// ─────────────────────────────────────────────────────────────────
+let rdrSettings = {
+  mode:          localStorage.getItem('rdr_s_mode')       || 'webtoon',
+  rot:           localStorage.getItem('rdr_s_rot')        || 'free',
+  scale:         localStorage.getItem('rdr_s_scale')      || 'fit',
+  cropBorders:   localStorage.getItem('rdr_s_crop')       === '1',
+  splitWide:     localStorage.getItem('rdr_s_split')      === '1',
+  rotateWide:    localStorage.getItem('rdr_s_rotatewide') === '1',
+  showPageNum:   localStorage.getItem('rdr_s_pagenum')    !== '0',
+  keepScreenOn:  localStorage.getItem('rdr_s_screenon')   === '1',
+  fullscreen:    localStorage.getItem('rdr_s_fullscreen') !== '0',
+  pageTransitions: localStorage.getItem('rdr_s_trans')    !== '0',
+};
+let _rdrSettingsTab = 'rm';
+
+function openRdrSettings(){
+  clearTimeout(rdrUITimer);
+  _syncSettingsUI();
+  document.getElementById('rdr-settings-sheet').classList.add('open');
+  document.getElementById('rdr-sheet-ov').classList.add('open');
+}
+function closeRdrSettings(){
+  document.getElementById('rdr-settings-sheet').classList.remove('open');
+  if(!document.getElementById('rdr-mode-sheet').classList.contains('open') &&
+     !document.getElementById('rdr-rot-sheet').classList.contains('open')){
+    document.getElementById('rdr-sheet-ov').classList.remove('open');
+  }
+  rdrAutoHide();
+}
+function rdrStabSwitch(t){
+  _rdrSettingsTab=t;
+  ['rm','gen','cf'].forEach(n=>{
+    document.getElementById('rstab-'+n).classList.toggle('on',n===t);
+    document.getElementById('rpanel-'+n).classList.toggle('on',n===t);
+  });
+}
+function _syncSettingsUI(){
+  // Mode chips
+  document.querySelectorAll('#rchips-mode .rdr-chip').forEach(b=>
+    b.classList.toggle('on', b.dataset.rm===rdrSettings.mode));
+  // Rot chips
+  document.querySelectorAll('#rchips-rot .rdr-chip').forEach(b=>
+    b.classList.toggle('on', b.dataset.rot===rdrSettings.rot));
+  // Scale chips
+  document.querySelectorAll('#rchips-scale .rdr-chip').forEach(b=>
+    b.classList.toggle('on', b.dataset.scale===rdrSettings.scale));
+  // Checkboxes
+  ['cropBorders','splitWide','rotateWide','showPageNum','keepScreenOn','fullscreen','pageTransitions']
+    .forEach(k=>{
+      const el=document.getElementById('chk-'+k);
+      if(el) el.classList.toggle('on', !!rdrSettings[k]);
+    });
+  // Apply scale CSS
+  _applyScale();
+}
+
+// ── Setting changers ──
+function rdrSetMode(m){
+  rdrSettings.mode=m;
+  localStorage.setItem('rdr_s_mode',m);
+  // Map to rdrMode and apply
+  rdrMode=m; rdrPendingMode=m;
+  S.saveRdrMode(m);
+  document.getElementById('rdr-mode-label').textContent=
+    {webtoon:'Long strip','webtoon-gaps':'Long strip w/gaps',ltr:'LTR',rtl:'RTL',vertical:'Vertical'}[m]||m;
+  document.querySelectorAll('#rchips-mode .rdr-chip').forEach(b=>b.classList.toggle('on',b.dataset.rm===m));
+  applyReaderMode();
+}
+function rdrSetRot(r){
+  rdrSettings.rot=r;
+  localStorage.setItem('rdr_s_rot',r);
+  document.querySelectorAll('#rchips-rot .rdr-chip').forEach(b=>b.classList.toggle('on',b.dataset.rot===r));
+  setRotation(r);
+}
+function rdrSetScale(s){
+  rdrSettings.scale=s;
+  localStorage.setItem('rdr_s_scale',s);
+  document.querySelectorAll('#rchips-scale .rdr-chip').forEach(b=>b.classList.toggle('on',b.dataset.scale===s));
+  _applyScale();
+}
+function _applyScale(){
+  const scroll=document.getElementById('rdr-scroll');
+  if(!scroll) return;
+  // Remove all scale classes first
+  scroll.classList.remove('scale-fit','scale-stretch','scale-width','scale-height','scale-orig');
+  scroll.classList.add('scale-'+rdrSettings.scale);
+}
+function rdrToggleSetting(key){
+  rdrSettings[key]=!rdrSettings[key];
+  const el=document.getElementById('chk-'+key);
+  if(el) el.classList.toggle('on',rdrSettings[key]);
+  // Persist
+  const storageKey='rdr_s_'+{cropBorders:'crop',splitWide:'split',rotateWide:'rotatewide',
+    showPageNum:'pagenum',keepScreenOn:'screenon',fullscreen:'fullscreen',pageTransitions:'trans'}[key];
+  localStorage.setItem(storageKey, rdrSettings[key]?'1':'0');
+  // Apply effects
+  if(key==='cropBorders'){
+    const btn=document.getElementById('rdr-crop-act');
+    if(rdrSettings.cropBorders) rdrToggleCrop._applyOn(); else rdrToggleCrop._applyOff();
+  }
+  if(key==='keepScreenOn'){
+    if(rdrSettings.keepScreenOn && navigator.wakeLock){
+      navigator.wakeLock.request('screen').catch(()=>{});
+    }
+  }
+  if(key==='fullscreen'){
+    if(rdrSettings.fullscreen && document.documentElement.requestFullscreen)
+      document.documentElement.requestFullscreen().catch(()=>{});
+    else if(!rdrSettings.fullscreen && document.exitFullscreen)
+      document.exitFullscreen().catch(()=>{});
+  }
+}
+
+// ── Custom filter ──
+function rdrApplyFilter(){
+  const b=document.getElementById('cf-brightness')?.value||100;
+  const c=document.getElementById('cf-contrast')?.value||100;
+  const s=document.getElementById('cf-saturation')?.value||100;
+  const h=document.getElementById('cf-hue')?.value||0;
+  document.getElementById('cf-brightness-val').textContent=b+'%';
+  document.getElementById('cf-contrast-val').textContent=c+'%';
+  document.getElementById('cf-saturation-val').textContent=s+'%';
+  document.getElementById('cf-hue-val').textContent=h+'°';
+  const scroll=document.getElementById('rdr-scroll');
+  if(scroll) scroll.style.filter=`brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
+}
+function rdrFilterPreset(p){
+  const presets={
+    none:       [100,100,100,0],
+    grayscale:  [100,100,  0,0],
+    inverted:   [100,100,100,0], // handled separately
+    warm:       [100,100,120,15],
+    cool:       [100,100, 80,200],
+  };
+  const vals=presets[p]||[100,100,100,0];
+  ['brightness','contrast','saturation','hue'].forEach((id,i)=>{
+    const el=document.getElementById('cf-'+id);
+    if(el){ el.value=vals[i]; }
+  });
+  rdrApplyFilter();
+  if(p==='inverted'){
+    const scroll=document.getElementById('rdr-scroll');
+    if(scroll) scroll.style.filter=(scroll.style.filter||'')+' invert(1)';
+  }
+}
+
+// ── Scale CSS ──
+const _scaleCSS=`
+#rdr-scroll.scale-fit    img{max-width:100%;max-height:100%;object-fit:contain}
+#rdr-scroll.scale-stretch img{width:100%;height:100%;object-fit:fill}
+#rdr-scroll.scale-width  img{width:100%;height:auto;max-height:none}
+#rdr-scroll.scale-height img{height:100%;width:auto;max-width:none}
+#rdr-scroll.scale-orig   img{width:auto;height:auto;max-width:none;max-height:none}
+`;
+(function(){const s=document.createElement('style');s.textContent=_scaleCSS;document.head.appendChild(s);})();
+
+function readerPrev(){if(B.chIdx<B.chapters.length-1)openReader(B.chIdx+1);}
+function readerNext(){if(B.chIdx>0)openReader(B.chIdx-1);}
+function closeReader(){
+  if(rdrObserver)rdrObserver.disconnect();
+  clearTimeout(rdrUITimer);
+  document.getElementById('reader-view').classList.remove('open');
+  document.getElementById('manga-detail').style.display='flex';
+}
+
+function addHistory(chIdx){
+  if(!B.manga)return;
+  const ch=B.chapters[chIdx];
+  // Remove ALL previous entries for this manga (keep only one per manga)
+  const hist=S.getHist().filter(h=>h.mangaId!==B.manga.id);
+  // Insert at top with latest chapter info
+  hist.unshift({
+    id: B.manga.id,  // use mangaId as stable id so remove works cleanly
+    mangaId: B.manga.id,
+    mangaTitle: B.manga.title,
+    chapter: ch.chapter,
+    chTitle: ch.title||'',
+    cover: B.manga.coverSmall||B.manga.cover,
+    sourceId: B.sourceId,
+    readAt: Date.now()
+  });
+  S.saveHist(hist.slice(0,200));
+}
+function markRead(chIdx,val=true){
+  if(!B.manga||!B.chapters[chIdx])return;
+  const ch=B.chapters[chIdx];
+  const key=S.readKey(B.sourceId,B.manga.id,ch.id);
+  const r=S.getRead();
+  if(val) r.add(key); else r.delete(key);
+  S.saveRead(r);
+}
+function isRead(chIdx){
+  if(!B.manga||!B.chapters[chIdx])return false;
+  const ch=B.chapters[chIdx];
+  return S.getRead().has(S.readKey(B.sourceId,B.manga.id,ch.id));
+}
+// Called when page counter updates — mark as read on last page
+function onPageChange(pg){
+  if(pg>=B.pages.length && B.pages.length>0){
+    if(!isRead(B.chIdx)){
+      markRead(B.chIdx,true);
+      // refresh chapter list silently (no re-render of whole detail)
+      document.querySelectorAll('.ch-item').forEach((el,i)=>{
+        if(i===B.chIdx) el.classList.add('read');
+      });
+    }
+  }
+}
+function showBrowseSpinner(msg=''){
+  // Show skeleton grid while loading — much better UX
+  document.getElementById('browse-content').innerHTML=skeletonGrid(12)+(msg?`<div style="text-align:center;padding:8px;font-size:12px;color:var(--mu)">${msg}</div>`:'');
+}
+function showBrowseError(msg){
+  document.getElementById('browse-content').innerHTML=`<div class="spw"><div style="font-size:28px">⚠</div><div class="sp-msg" style="color:#ff8a8a">${msg}</div></div>`;
+}
+
+// ── OPEN FROM LIBRARY ──
+async function openFromLibrary(sourceId,mangaId){
+  const source=allSrc().find(s=>s.id===sourceId);
+  if(!source){showToast('Source not found',true);return;}
+  B.sourceId=sourceId;B.lang='en';B.view='detail';
+  switchPage('browse');
+  document.getElementById('browse-home').style.display='none';
+  document.getElementById('browse-detail').style.display='none';
+  document.getElementById('manga-detail').style.display='flex';
+  // reader closed via classList
+  document.getElementById('det-content').innerHTML='<div class="spw"><div class="sp"></div></div>';
+  try{await loadSource(source);await openMangaDetail(mangaId);}
+  catch(e){showToast('Error: '+e.message,true);}
+}
+
+// ═══════════════════════════════ SOURCES ═══════════════════════════════
+function openSourceModal(){document.getElementById('ov-source').classList.add('open');}
+function closeSourceModal(){document.getElementById('ov-source').classList.remove('open');['f-name','f-file','f-icon'].forEach(id=>document.getElementById(id).value='');}
+function confirmAddSource(){
+  const name=document.getElementById('f-name').value.trim();
+  let file=document.getElementById('f-file').value.trim();
+  const icon=document.getElementById('f-icon').value.trim()||'📖';
+  if(!name||!file){showToast('Fill all fields',true);return;}
+  if(!file.endsWith('.html'))file+='.html';
+  // SECURITY: block path traversal and absolute URLs
+  if(/\.\.|^\/|^https?:\/\/|^\/\//i.test(file)){
+    showToast('Invalid path: no ../ or absolute URLs allowed',true);return;
+  }
+  // Only allow safe filename characters
+  if(!/^[a-zA-Z0-9_\-./]+\.html$/.test(file)){
+    showToast('Filename contains invalid characters',true);return;
+  }
+  const c=S.getSrc();c.push({id:'c_'+Date.now(),name:sanitizeText(name),file,icon,builtin:false,langs:'?'});
+  S.saveSrc(c);closeSourceModal();renderBrowseHome();showToast('✓ '+name+' added');
+}
+function removeSource(id,e){e.stopPropagation();if(!confirm('Remove this source?'))return;S.saveSrc(S.getSrc().filter(s=>s.id!==id));renderBrowseHome();showToast('Source removed');}
+
+// ═══════════════════════════════ LIBRARY MANAGEMENT ═══════════════════════════════
+function openCatModal(){document.getElementById('ov-cat').classList.add('open');setTimeout(()=>document.getElementById('cat-nm-inp').focus(),100);}
+function closeCatModal(){document.getElementById('ov-cat').classList.remove('open');document.getElementById('cat-nm-inp').value='';document.getElementById('cat-ic-inp').value='';}
+function confirmNewCat(){
+  const name=document.getElementById('cat-nm-inp').value.trim();
+  const icon=document.getElementById('cat-ic-inp').value.trim()||'📁';
+  if(!name){showToast('Enter a name',true);return;}
+  const cats=S.getCats();cats.push({id:'cat_'+Date.now(),name,icon,createdAt:Date.now()});
+  S.saveCats(cats);closeCatModal();if(curPage==='library')renderLibrary();showToast('✓ "'+name+'" created');
+}
+
+let pendingManga=null,selCatId=null;
+function openAddLib(manga){
+  const source=allSrc().find(s=>s.id===B.sourceId);
+  pendingManga={...manga,sourceId:B.sourceId,sourceName:source?.name||''};
+  selCatId=null;
+  document.getElementById('addlib-title').textContent=manga.title||'Manga';
+  document.getElementById('quick-cat').value='';
+  renderCpicker();
+  document.getElementById('ov-addlib').classList.add('open');
+}
+function closeAddLib(){document.getElementById('ov-addlib').classList.remove('open');pendingManga=null;selCatId=null;}
+function renderCpicker(){
+  const cats=S.getCats();
+  if(!cats.length){document.getElementById('cpicker').innerHTML=`<div style="font-size:12px;color:var(--mu);padding:6px 0">No categories — create one below</div>`;return;}
+  document.getElementById('cpicker').innerHTML=cats.map(c=>`
+    <div class="cpi${selCatId===c.id?' sel':''}" onclick="selCatId='${c.id}';renderCpicker()">
+      <span class="cpi-em">${c.icon||'📁'}</span>
+      <span class="cpi-nm">${esc(c.name)}</span>
+      <span class="cpi-cnt">${S.getLib().filter(m=>m.catId===c.id).length}</span>
+    </div>`).join('');
+}
+function quickCat(){
+  const name=document.getElementById('quick-cat').value.trim();
+  if(!name){showToast('Enter a name',true);return;}
+  const cats=S.getCats();const cat={id:'cat_'+Date.now(),name,icon:'📁',createdAt:Date.now()};cats.push(cat);S.saveCats(cats);
+  selCatId=cat.id;document.getElementById('quick-cat').value='';renderCpicker();showToast('✓ "'+name+'" created');
+}
+function confirmAddLib(){
+  if(!pendingManga){closeAddLib();return;}
+  let catId=selCatId;
+  const qn=document.getElementById('quick-cat').value.trim();
+  if(!catId&&qn){const cats=S.getCats();const c={id:'cat_'+Date.now(),name:qn,icon:'📁',createdAt:Date.now()};cats.push(c);S.saveCats(cats);catId=c.id;}
+  if(!catId){showToast('Pick or create a category',true);return;}
+  const lib=S.getLib();
+  if(lib.find(m=>m.id===pendingManga.id&&m.catId===catId)){showToast('Already in this category');closeAddLib();return;}
+  lib.push({id:pendingManga.id,title:pendingManga.title,cover:pendingManga.coverSmall||pendingManga.cover,sourceId:pendingManga.sourceId,sourceName:pendingManga.sourceName,catId,addedAt:Date.now()});
+  S.saveLib(lib);closeAddLib();showToast('✓ Added to library');
+  renderLibrary();
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  STORAGE BACKEND — routes to IndexedDB or File System Access API
+// ─────────────────────────────────────────────────────────────────
+let _idb=null;
+let _fsDir=null;          // FileSystemDirectoryHandle (File System Access API)
+let _fsDirName='Mihon Downloads'; // default folder name shown to user
+
+// ── IndexedDB (always available as fallback) ──
+// IntersectionObserver compat check (IE11 fallback)
+if(!window.IntersectionObserver){
+  window.IntersectionObserver=function(cb,opts){
+    return {observe:function(el){
+      // Fallback: use scroll event on root for page tracking
+      const root=opts&&opts.root||document;
+      root.addEventListener('scroll',function(){
+        const rect=el.getBoundingClientRect();
+        const ratio=Math.min(Math.max(0,rect.bottom)/window.innerHeight,1);
+        if(ratio>0.4) cb([{target:el,intersectionRatio:ratio,isIntersecting:true}]);
+      },{passive:true});
+    },disconnect:function(){}};
+  };
+}
+
+// ── IntersectionObserver polyfill for old browsers ──
+if(typeof IntersectionObserver==='undefined'){
+  window.IntersectionObserver=function(cb,opts){
+    const root=opts&&opts.root;
+    return{
+      observe(el){
+        const src=root||document.querySelector('.rdr-scroll')||window;
+        const fn=function(){
+          const rect=el.getBoundingClientRect();
+          const h=window.innerHeight;
+          const ratio=Math.max(0,Math.min(1,(Math.min(rect.bottom,h)-Math.max(rect.top,0))/rect.height||0));
+          if(ratio>0.3) cb([{target:el,intersectionRatio:ratio,isIntersecting:true}]);
+        };
+        src.addEventListener('scroll',fn,{passive:true});
+        el._ioFn=fn; el._ioRoot=src;
+      },
+      disconnect(){ /* best-effort */ }
+    };
+  };
+}
+
+async function _idbOpen(){
+  if(_idb) return _idb;
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('mihon_pages',1);
+    r.onupgradeneeded=e=>{
+      if(!e.target.result.objectStoreNames.contains('pages'))
+        e.target.result.createObjectStore('pages',{keyPath:'key'});
+    };
+    r.onsuccess=e=>{_idb=e.target.result;res(_idb);};
+    r.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbSave(key,pages){
+  const db=await _idbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('pages','readwrite');
+    tx.objectStore('pages').put({key,pages,ts:Date.now()});
+    tx.oncomplete=()=>res(true);
+    tx.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbGet(key){
+  const db=await _idbOpen();
+  return new Promise((res,rej)=>{
+    const r=db.transaction('pages','readonly').objectStore('pages').get(key);
+    r.onsuccess=e=>res(e.target.result||null);
+    r.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbDel(key){
+  const db=await _idbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('pages','readwrite');
+    tx.objectStore('pages').delete(key);
+    tx.oncomplete=()=>res();
+    tx.onerror=e=>rej(e.target.error);
+  });
+}
+
+// ── File System Access API ──
+const FS_SUPPORTED = typeof window.showDirectoryPicker === 'function';
+
+async function fsGetDir(){
+  if(_fsDir) return _fsDir;
+  throw new Error('No folder selected. Go to Settings → Storage to pick a folder.');
+}
+
+// Each chapter is stored as a JSON file: key.json
+// key format: sourceId__chapterId  (replace __ with safe chars)
+function _fsKey(key){ return key.replace(/[^a-zA-Z0-9_\-]/g,'_')+'.json'; }
+
+async function _fsSave(key, pages){
+  const dir = await fsGetDir();
+  const fname = _fsKey(key);
+  const fh = await dir.getFileHandle(fname, {create:true});
+  const w = await fh.createWritable();
+  await w.write(JSON.stringify({key, pages, ts:Date.now()}));
+  await w.close();
+  return true;
+}
+async function _fsGet(key){
+  const dir = await fsGetDir();
+  try{
+    const fh = await dir.getFileHandle(_fsKey(key));
+    const file = await fh.getFile();
+    const text = await file.text();
+    return JSON.parse(text);
+  }catch(e){ return null; }
+}
+async function _fsDel(key){
+  const dir = await fsGetDir();
+  try{ await dir.removeEntry(_fsKey(key)); }catch(e){}
+}
+
+// ── Public interface — routes based on setting ──
+async function idbSave(key, pages){
+  if(S.getStorageMode()==='fs' && FS_SUPPORTED && _fsDir)
+    return _fsSave(key, pages);
+  return _idbSave(key, pages);
+}
+async function idbGet(key){
+  // Try FS first if selected, fallback to IDB
+  if(S.getStorageMode()==='fs' && FS_SUPPORTED && _fsDir){
+    const r = await _fsGet(key);
+    if(r) return r;
+  }
+  return _idbGet(key);
+}
+async function idbDel(key){
+  if(S.getStorageMode()==='fs' && FS_SUPPORTED && _fsDir)
+    await _fsDel(key).catch(()=>{});
+  await _idbDel(key).catch(()=>{});
+}
+
+// ── Folder picker (called from Settings) ──
+async function pickStorageFolder(){
+  if(!FS_SUPPORTED){
+    showToast('File System Access API not supported on this browser. Use Chrome or Kiwi.',true);
+    return;
+  }
+  try{
+    const dir = await window.showDirectoryPicker({
+      id:'mihon-dl',
+      mode:'readwrite',
+      startIn:'downloads'
+    });
+    _fsDir = dir;
+    _fsDirName = dir.name;
+    S.saveStorageMode('fs');
+    localStorage.setItem('mhub_fs_dirname', dir.name);
+    updateStorageUI();
+    showToast('✓ Folder "'+dir.name+'" selected');
+  }catch(e){
+    if(e.name!=='AbortError') showToast('Could not access folder: '+e.message, true);
+  }
+}
+
+function switchToIDB(){
+  S.saveStorageMode('idb');
+  _fsDir=null;
+  updateStorageUI();
+  showToast('✓ Switched to browser storage');
+}
+
+function updateStorageUI(){
+  const mode=S.getStorageMode();
+  const isFsActive = mode==='fs' && _fsDir!=null;
+  // update settings page indicators
+  const fsStatus=document.getElementById('fs-status');
+  const idbStatus=document.getElementById('idb-status');
+  const fsBadge=document.getElementById('fs-badge');
+  if(fsStatus) fsStatus.textContent=isFsActive?'Active — '+_fsDirName:'Not connected';
+  if(idbStatus) idbStatus.textContent=!isFsActive?'Active':'Available (fallback)';
+  if(fsBadge){
+    fsBadge.textContent=isFsActive?'✓ Active':'';
+    fsBadge.style.color='#4ade80';
+  }
+}
+
+// Persist & restore FS permission across sessions using StorageManager
+// Note: directory handle permission is NOT persisted — user must re-pick each session
+// We show a prompt if 'fs' mode is set but no dir is connected
+function checkStorageOnLoad(){
+  if(S.getStorageMode()==='fs' && !_fsDir){
+    // Show a subtle banner asking to reconnect
+    const banner=document.getElementById('fs-banner');
+    if(banner){
+      banner.style.display='flex';
+      const name=localStorage.getItem('mhub_fs_dirname')||'folder';
+      document.getElementById('fs-banner-name').textContent=name;
+    }
+  }
+}
+
+// ═══════════════════════════════ DOWNLOAD ═══════════════════════════════
+let downloading=false;
+async function downloadChapter(chIdx,mangaTitle){
+  if(downloading){showToast('Already downloading...',true);return;}
+  if(typeof JSZip==='undefined'){showToast('JSZip not loaded',true);return;}
+  const ch=B.chapters[chIdx];if(!ch){showToast('Chapter not found',true);return;}
+  downloading=true;
+  const dp=document.getElementById('dl-prog'),dt=document.getElementById('dl-t'),db=document.getElementById('dl-b'),di=document.getElementById('dl-i');
+  dt.textContent=`Downloading Ch.${ch.chapter}...`;db.style.width='0%';di.textContent='Fetching pages...';dp.classList.add('show');
+  try{
+    const pages=await callSource(B.sourceId,'getPages',{chapterId:ch.id});
+    if(!pages.length)throw new Error('No pages found');
+    const zip=new JSZip();
+    const localPages=[];
+    // Download each page + save as dataURL for offline reading
+    for(let i=0;i<pages.length;i++){
+      db.style.width=((i/pages.length)*100)+'%';di.textContent=`Page ${i+1} / ${pages.length}`;
+      const res=await fetch(pages[i].url);if(!res.ok)throw new Error(`Page ${i+1} failed`);
+      const blob=await res.blob();
+      // Convert to dataURL for IndexedDB storage
+      const dataURL=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(blob);});
+      localPages.push({index:i,url:dataURL});
+      const ext=blob.type.includes('png')?'png':'jpg';
+      zip.file(`page_${String(i+1).padStart(3,'0')}.${ext}`,blob);
+    }
+    // Save pages to IndexedDB for offline reading
+    di.textContent='Saving offline...';
+    const dlKey=B.sourceId+'__'+ch.id;
+    await idbSave(dlKey,localPages);
+    // Create ZIP for export
+    db.style.width='100%';di.textContent='Creating ZIP...';
+    const zipBlob=await zip.generateAsync({type:'blob'});
+    const safe=(mangaTitle||'manga').replace(/[^a-zA-Z0-9 ]/g,'_').slice(0,40);
+    const a=document.createElement('a');a.href=URL.createObjectURL(zipBlob);a.download=`${safe}_Ch${ch.chapter}.zip`;a.click();URL.revokeObjectURL(a.href);
+    // Record in download list
+    const dls=S.getDls();
+    if(!dls.find(d=>d.key===dlKey)){
+      dls.unshift({
+        key:dlKey,
+        sourceId:B.sourceId,
+        chapterId:ch.id,
+        chapter:ch.chapter,
+        chTitle:ch.title||'',
+        mangaId:B.manga?.id||'',
+        mangaTitle:mangaTitle||'',
+        cover:B.manga?.coverSmall||B.manga?.cover||'',
+        pageCount:localPages.length,
+        savedAt:Date.now()
+      });
+      S.saveDls(dls);
+    }
+    if(B.manga&&B.chapters.length) renderDetail();
+    showToast(`✓ Chapter ${ch.chapter} saved offline`);
+  }catch(e){showToast('Download failed: '+e.message,true);}
+  finally{downloading=false;setTimeout(()=>dp.classList.remove('show'),1500);}
+}
+
+// ═══════════════════════════════ LIBRARY SORT & FILTER ═══════════════════════════════
+let libSort      = localStorage.getItem('mhub_lib_sort')      || 'added';
+let libSortDir   = localStorage.getItem('mhub_lib_sort_dir')  || 'desc'; // asc | desc
+let libFiltRead  = localStorage.getItem('mhub_filt_read')     === '1'; // show only unread
+let libFiltDl    = localStorage.getItem('mhub_filt_dl')       === '1'; // show only downloaded
+let libGrid      = localStorage.getItem('mhub_lib_grid')      || 'medium';
+let libShowBadge = localStorage.getItem('mhub_show_badge')    !== '0';
+let libShowTitle = localStorage.getItem('mhub_show_title')    !== '0';
+let _libSheetTab = 'sort';
+
+function openLibSheet(tab){
+  _libSheetTab=tab||'sort';
+  document.getElementById('lib-sheet').classList.add('open');
+  libSheetTab(_libSheetTab);
+  updateSortIcons();
+  updateFilterIcons();
+  updateDisplayBtns();
+}
+function closeLibSheet(){ document.getElementById('lib-sheet').classList.remove('open'); }
+function libSheetTab(t){
+  _libSheetTab=t;
+  ['filter','sort','display'].forEach(n=>{
+    document.getElementById('lstab-'+n).classList.toggle('on',n===t);
+    document.getElementById('lpanel-'+n).classList.toggle('on',n===t);
+  });
+}
+
+// ── Sort ──
+function setLibSort(key){
+  if(libSort===key) libSortDir=libSortDir==='asc'?'desc':'asc';
+  else{ libSort=key; libSortDir='asc'; }
+  localStorage.setItem('mhub_lib_sort',libSort);
+  localStorage.setItem('mhub_lib_sort_dir',libSortDir);
+  updateSortIcons();
+  renderLibContent();
+}
+function updateSortIcons(){
+  const keys=['alpha','chapters','lastRead','unread','added','random'];
+  keys.forEach(k=>{
+    const el=document.getElementById('sort-'+k+'-ic');
+    if(!el) return;
+    if(libSort===k) el.textContent=libSortDir==='asc'?'↑':'↓';
+    else el.textContent='';
+  });
+}
+
+// ── Filter ──
+function toggleFilterRead(){
+  libFiltRead=!libFiltRead;
+  localStorage.setItem('mhub_filt_read',libFiltRead?'1':'0');
+  updateFilterIcons(); renderLibContent();
+}
+function toggleFilterDl(){
+  libFiltDl=!libFiltDl;
+  localStorage.setItem('mhub_filt_dl',libFiltDl?'1':'0');
+  updateFilterIcons(); renderLibContent();
+}
+function updateFilterIcons(){
+  const re=document.getElementById('filt-read-ic');
+  const dl=document.getElementById('filt-dl-ic');
+  if(re) re.textContent=libFiltRead?'✓':'';
+  if(dl) dl.textContent=libFiltDl?'✓':'';
+}
+
+// ── Display ──
+function setLibGrid(size){
+  libGrid=size;
+  localStorage.setItem('mhub_lib_grid',size);
+  updateDisplayBtns();
+  // Update grid CSS
+  applyLibGrid();
+}
+function applyLibGrid(){
+  const g=document.getElementById('lib-content');
+  if(!g) return;
+  const sizes={small:'85px',medium:'110px',large:'155px'};
+  const grid=g.querySelector('.lib-grid');
+  if(grid) grid.style.gridTemplateColumns=`repeat(auto-fill,minmax(${sizes[libGrid]||'110px'},1fr))`;
+}
+function toggleUnreadBadge(btn){
+  libShowBadge=!libShowBadge;
+  btn.classList.toggle('on',libShowBadge);
+  localStorage.setItem('mhub_show_badge',libShowBadge?'1':'0');
+  renderLibContent();
+}
+function toggleLibTitle(btn){
+  libShowTitle=!libShowTitle;
+  btn.classList.toggle('on',libShowTitle);
+  localStorage.setItem('mhub_show_title',libShowTitle?'1':'0');
+  renderLibContent();
+}
+function updateDisplayBtns(){
+  ['small','medium','large'].forEach(s=>{
+    const b=document.getElementById('disp-'+s);
+    if(b) b.classList.toggle('on',libGrid===s);
+  });
+  const tb=document.getElementById('toggle-badge');
+  const tt=document.getElementById('toggle-title');
+  if(tb) tb.classList.toggle('on',libShowBadge);
+  if(tt) tt.classList.toggle('on',libShowTitle);
+}
+
+// ════════════════════════════════════════════════════════════════
+// SORT + FILTER items for renderLibContent
+// ════════════════════════════════════════════════════════════════
+function sortAndFilterLib(items){
+  const readSet=S.getRead();
+  const hist=S.getHist();
+  const dls=S.getDls();
+  const snaps=S.getSnapshots();
+
+  // ── Filter ──
+  if(libFiltRead){
+    // unread = has at least one chapter not in readSet
+    // We don't load chapters here (too slow), so we approximate:
+    // a manga is "unread" if it has no history entry or its snap has unread count > 0
+    items=items.filter(m=>{
+      const lastRead=hist.find(h=>h.mangaId===m.id);
+      return !lastRead; // simple: never been read
+    });
+  }
+  if(libFiltDl){
+    items=items.filter(m=>dls.some(d=>d.mangaId===m.id));
+  }
+  if(libSearchVal) items=items.filter(m=>m.title.toLowerCase().includes(libSearchVal.toLowerCase()));
+
+  // ── Sort ──
+  const dir=libSortDir==='asc'?1:-1;
+  if(libSort==='random'){
+    items=[...items].sort(()=>Math.random()-.5);
+  } else if(libSort==='alpha'){
+    items=[...items].sort((a,b)=>dir*a.title.localeCompare(b.title));
+  } else if(libSort==='lastRead'){
+    items=[...items].sort((a,b)=>{
+      const ha=hist.find(h=>h.mangaId===a.id),hb=hist.find(h=>h.mangaId===b.id);
+      return dir*((hb?.readAt||0)-(ha?.readAt||0));
+    });
+  } else if(libSort==='added'){
+    items=[...items].sort((a,b)=>dir*((b.addedAt||0)-(a.addedAt||0)));
+  } else if(libSort==='unread'){
+    items=[...items].sort((a,b)=>{
+      // unread = snap count - read chapters (approximated by history)
+      const snapA=snaps[a.id]?.count||0, snapB=snaps[b.id]?.count||0;
+      return dir*(snapB-snapA);
+    });
+  } else if(libSort==='chapters'){
+    items=[...items].sort((a,b)=>{
+      const ca=snaps[a.id]?.count||0, cb=snaps[b.id]?.count||0;
+      return dir*(cb-ca);
+    });
+  }
+  return items;
+}
+
+// ═══════════════════════════════ SELECTION MODE ═══════════════════════════════
+let selMode=false;
+let selSet=new Set(); // indices of selected chapters
+
+function chItemClick(e,idx){
+  if(selMode){ toggleSelItem(idx); return; }
+  if(e.target.closest('.ch-dl')) return;
+  openReader(idx);
+}
+
+function enterSelectionMode(){
+  selMode=true; selSet=new Set();
+  document.getElementById('det-normal-bar').style.display='none';
+  document.getElementById('det-sel-bar').classList.add('on');
+  // Show checkboxes on all ch-items
+  document.querySelectorAll('.ch-item').forEach(el=>{
+    el.querySelector('.ch-sel').style.display='flex';
+  });
+  updateSelCount();
+}
+function exitSelectionMode(){
+  selMode=false; selSet=new Set();
+  document.getElementById('det-normal-bar').style.display='flex';
+  document.getElementById('det-sel-bar').classList.remove('on');
+  document.querySelectorAll('.ch-item').forEach(el=>{
+    el.classList.remove('selected');
+    el.querySelector('.ch-sel').style.display='none';
+  });
+}
+function toggleSelItem(idx){
+  const el=document.querySelector(`.ch-item[data-chi="${idx}"]`);
+  if(!el) return;
+  if(selSet.has(idx)){ selSet.delete(idx); el.classList.remove('selected'); }
+  else{ selSet.add(idx); el.classList.add('selected'); }
+  updateSelCount();
+}
+function updateSelCount(){
+  document.getElementById('sel-count').textContent=selSet.size+' selected';
+}
+function openSelSheet(){ document.getElementById('sel-sheet').classList.add('open'); }
+function closeSelSheet(){ document.getElementById('sel-sheet').classList.remove('open'); }
+
+function selSelectAll(){
+  document.querySelectorAll('.ch-item').forEach(el=>{
+    const i=+el.dataset.chi; selSet.add(i); el.classList.add('selected');
+  }); updateSelCount();
+}
+function selInvertSelection(){
+  document.querySelectorAll('.ch-item').forEach(el=>{
+    const i=+el.dataset.chi;
+    if(selSet.has(i)){ selSet.delete(i); el.classList.remove('selected'); }
+    else{ selSet.add(i); el.classList.add('selected'); }
+  }); updateSelCount();
+}
+function selSelectUnread(){
+  const r=S.getRead();
+  document.querySelectorAll('.ch-item').forEach(el=>{
+    const i=+el.dataset.chi;
+    const ch=B.chapters[i];
+    if(!ch) return;
+    const k=S.readKey(B.sourceId,B.manga.id,ch.id);
+    if(!r.has(k)){ selSet.add(i); el.classList.add('selected'); }
+  }); updateSelCount();
+}
+function selSelectBelow(){
+  // Select all chapters at lower indices than the lowest selected
+  const minSel=Math.min(...[...selSet]);
+  if(!isFinite(minSel)) return;
+  document.querySelectorAll('.ch-item').forEach(el=>{
+    const i=+el.dataset.chi;
+    if(i>minSel){ selSet.add(i); el.classList.add('selected'); }
+  }); updateSelCount();
+}
+function selMarkRead(val){
+  const r=S.getRead();
+  selSet.forEach(i=>{
+    const ch=B.chapters[i]; if(!ch) return;
+    const k=S.readKey(B.sourceId,B.manga.id,ch.id);
+    if(val) r.add(k); else r.delete(k);
+  });
+  S.saveRead(r);
+  exitSelectionMode();
+  renderDetail();
+  showToast(val?'✓ Marked as read':'✓ Marked as unread');
+}
+async function selDownload(){
+  const indices=[...selSet].sort((a,b)=>a-b);
+  if(!indices.length){ showToast('Nothing selected',true); return; }
+  exitSelectionMode();
+  showToast(`Downloading ${indices.length} chapters...`);
+  for(const i of indices){
+    await downloadChapter(i, B.manga?.title||'');
+    await new Promise(r=>setTimeout(r,400)); // small delay between downloads
+  }
+}
+async function selDownloadN(n){
+  // Find next N unread chapters
+  const r=S.getRead();
+  const unread=[];
+  for(let i=0;i<B.chapters.length&&unread.length<n;i++){
+    const ch=B.chapters[i];
+    const k=S.readKey(B.sourceId,B.manga.id,ch.id);
+    if(!r.has(k)) unread.push(i);
+  }
+  if(!unread.length){ showToast('No unread chapters found',true); return; }
+  showToast(`Downloading ${unread.length} unread chapters...`);
+  for(const i of unread){
+    await downloadChapter(i, B.manga?.title||'');
+    await new Promise(r=>setTimeout(r,400));
+  }
+}
+function selDeleteDownloads(){
+  const dls=S.getDls();
+  const toDelete=[];
+  selSet.forEach(i=>{
+    const ch=B.chapters[i]; if(!ch) return;
+    const k=B.sourceId+'__'+ch.id;
+    if(dls.find(d=>d.key===k)) toDelete.push(k);
+  });
+  if(!toDelete.length){ showToast('No downloaded chapters selected',true); return; }
+  if(!confirm(`Delete ${toDelete.length} downloaded chapter(s)?`)) return;
+  S.saveDls(dls.filter(d=>!toDelete.includes(d.key)));
+  toDelete.forEach(k=>idbDel(k).catch(()=>{}));
+  exitSelectionMode();
+  renderDetail();
+  showToast(`Deleted ${toDelete.length} download(s)`);
+}
+
+// ═══════════════════════════════ HELPERS ═══════════════════════════════
+function sanitizeUrl(u){
+  // Only allow http/https/data URLs in src attributes
+  const s=String(u||'');
+  if(/^https?:\/\//i.test(s)||/^data:image\//i.test(s)) return s;
+  if(s==='') return '';
+  return ''; // reject javascript:, blob:, etc.
+}
+function esc(s){
+  // Sanitize for HTML attribute context: escapes &, <, >, ", '
+  return String(s||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;');
+}
+function sanitizeText(s){
+  // Plain text — strip all HTML tags
+  return String(s||'').replace(/<[^>]*>/g,'').slice(0,200);
+}
+function sanitizeId(s){
+  // Safe for use as JS function argument: only allow word chars, hyphens, underscores
+  return String(s||'').replace(/[^a-zA-Z0-9_\-]/g,'');
+}
+function relTime(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return 'Just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+let toastT;
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'');
+  requestAnimationFrame(()=>{requestAnimationFrame(()=>t.classList.add('show'));});
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('ov-addlib').classList.contains('open'))closeAddLib();
+    else if(document.getElementById('ov-cat').classList.contains('open'))closeCatModal();
+    else if(document.getElementById('ov-source').classList.contains('open'))closeSourceModal();
+  }
+});
+['f-name','f-file','f-icon'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')confirmAddSource();}));
+document.getElementById('cat-nm-inp').addEventListener('keydown',e=>{if(e.key==='Enter')confirmNewCat();});
+
+// ══════════════════════════════════════════════════════════════
+//  RIPPLE EFFECT — Material Design 3 style
+// ══════════════════════════════════════════════════════════════
+function addRipple(e){
+  const btn=e.currentTarget;
+  const rect=btn.getBoundingClientRect();
+  const size=Math.max(rect.width,rect.height)*2;
+  const x=(e.clientX-rect.left)-size/2;
+  const y=(e.clientY-rect.top)-size/2;
+  const r=document.createElement('span');
+  r.className='ripple-el';
+  r.style.cssText=`width:${size}px;height:${size}px;left:${x}px;top:${y}px`;
+  btn.appendChild(r);
+  r.addEventListener('animationend',()=>r.remove());
+}
+function initRipples(){
+  document.querySelectorAll('.bnav-item,.ic-btn,.btn,.det-action,.rdr-act,.rdr-ch-btn,.ch-item,.lib-item,.mc,.more-item,.sel-item,.lib-sort-item,.rdr-chip,.rdr-rot-btn,.rdr-mode-btn,.rdr-check-row').forEach(el=>{
+    if(el._ripple) return;
+    el._ripple=true;
+    el.classList.add('ripple-host');
+    el.addEventListener('pointerdown', addRipple, {passive:true});
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SKELETON SCREENS
+// ══════════════════════════════════════════════════════════════
+function skeletonGrid(count=12, aspect='2/3'){
+  return `<div class="lib-grid">`+
+    Array(count).fill(0).map(()=>`
+      <div class="lib-item">
+        <div class="skeleton" style="width:100%;aspect-ratio:${aspect}"></div>
+        <div class="skeleton" style="margin:6px 6px 4px;height:11px;width:80%"></div>
+        <div class="skeleton" style="margin:0 6px 8px;height:9px;width:50%"></div>
+      </div>`).join('')+
+    `</div>`;
+}
+function skeletonList(count=6){
+  return Array(count).fill(0).map(()=>`
+    <div style="display:flex;gap:12px;padding:10px 16px;align-items:center">
+      <div class="skeleton" style="width:40px;height:56px;border-radius:6px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div class="skeleton" style="height:13px;width:70%;margin-bottom:7px;border-radius:4px"></div>
+        <div class="skeleton" style="height:11px;width:45%;border-radius:4px"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DOUBLE-TAP TO ZOOM on reader images
+// ══════════════════════════════════════════════════════════════
+let _dtapTimer=null, _dtapImg=null;
+function initDoubleTapZoom(){
+  const scroll=document.getElementById('rdr-scroll');
+  if(!scroll||scroll._dtap) return;
+  scroll._dtap=true;
+  scroll.addEventListener('click', e=>{
+    if(rdrPaged) return; // paged mode uses tap zones
+    const img=e.target.closest('img');
+    if(!img) return;
+    if(_dtapTimer){
+      clearTimeout(_dtapTimer);
+      _dtapTimer=null;
+      // Double tap detected — toggle zoom
+      if(img.classList.contains('zoomed')){
+        img.classList.remove('zoomed');
+        img.style.transform='';
+        _dtapImg=null;
+      } else {
+        // Zoom to tap point
+        const rect=img.getBoundingClientRect();
+        const px=((e.clientX-rect.left)/rect.width*100).toFixed(1)+'%';
+        const py=((e.clientY-rect.top)/rect.height*100).toFixed(1)+'%';
+        img.style.setProperty('--zoom-x',px);
+        img.style.setProperty('--zoom-y',py);
+        img.classList.add('zoomed');
+        if(_dtapImg&&_dtapImg!==img) _dtapImg.classList.remove('zoomed');
+        _dtapImg=img;
+      }
+    } else {
+      _dtapTimer=setTimeout(()=>{ _dtapTimer=null; }, 280);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  IMAGE PRELOADING for paged reader
+// ══════════════════════════════════════════════════════════════
+const _preloaded=new Set();
+function preloadNextPages(currentIdx, ahead=3){
+  for(let i=currentIdx+1; i<=currentIdx+ahead && i<B.pages.length; i++){
+    const url=B.pages[i]?.url;
+    if(url && !_preloaded.has(url)){
+      _preloaded.add(url);
+      const img=new Image();
+      img.src=url;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════ INIT ═══════════════════════════════
+renderLibrary();
+updateNavBadge();
+setTimeout(initRipples,200);
+checkStorageOnLoad();
+</script>
+</body>
+</html>
+<!--
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║                        HTML MANGA READER                                  ║
+  ║                                                                  ║
+  ║  Built with Claude AI — claude-sonnet-4-6                        ║
+  ║  Anthropic · https://claude.ai                                   ║
+  ║                                                                  ║
+  ║  This project was designed and written almost entirely through   ║
+  ║  iterative conversation with Claude AI. The architecture,        ║
+  ║  reader engine, offline storage, security sandboxing, source     ║
+  ║  system, and all UI logic were produced via AI-assisted coding.  ║
+  ║                                                                  ║
+  ║  Stack: Vanilla HTML + CSS + JavaScript · Single file · No deps  ║
+  ╚══════════════════════════════════════════════════════════════════╝
+-->

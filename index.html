@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>HTML Manga Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070a;--sf:#0f0f14;--sf2:#17171e;--bd:#22222c;
+  --ac:#a8c7fa;--ac2:#7cacf8;--tx:#ededf0;--mu:#60607a;
+}
+body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* HERO */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 24px;text-align:center;position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%,rgba(168,199,250,.1),transparent 60%),
+    radial-gradient(ellipse 30% 40% at 80% 80%,rgba(168,199,250,.05),transparent);
+  pointer-events:none;
+}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(168,199,250,.08);border:1px solid rgba(168,199,250,.2);
+  border-radius:99px;padding:5px 14px;font-size:12px;color:var(--ac);
+  font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:28px;
+}
+.hero-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(72px,18vw,140px);letter-spacing:6px;line-height:.9;
+  background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.25));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:20px;
+}
+.hero-desc{font-size:15px;color:var(--mu);max-width:460px;line-height:1.75;margin-bottom:40px}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btn-main{
+  background:var(--ac);color:#000;
+  border:none;padding:13px 28px;border-radius:10px;font-family:inherit;
+  font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-main:hover{opacity:.85}
+.btn-ghost{
+  background:var(--sf2);color:var(--tx);border:1px solid var(--bd);
+  padding:12px 24px;border-radius:10px;font-family:inherit;font-size:14px;
+  cursor:pointer;transition:border-color .2s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-ghost:hover{border-color:var(--mu)}
+
+/* FEATURES */
+.features{padding:80px 24px;max-width:960px;margin:0 auto}
+.section-label{
+  font-size:12px;letter-spacing:3px;color:var(--mu);
+  text-align:center;margin-bottom:10px;text-transform:uppercase;
+}
+.section-title{
+  font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,5vw,48px);
+  letter-spacing:2px;text-align:center;margin-bottom:48px;
+}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.feat-card{
+  background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:22px;
+  transition:border-color .2s;
+}
+.feat-card:hover{border-color:rgba(168,199,250,.25)}
+.feat-icon{font-size:24px;margin-bottom:12px}
+.feat-title{font-size:14px;font-weight:600;margin-bottom:6px;color:var(--tx)}
+.feat-desc{font-size:13px;color:var(--mu);line-height:1.6}
+
+/* ARCHITECTURE */
+.arch-section{padding:0 24px 80px;max-width:860px;margin:0 auto}
+.arch-boxes{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+.arch-box{
+  flex:1;min-width:240px;background:var(--sf);border:1px solid var(--bd);
+  border-radius:14px;padding:22px;
+}
+.arch-box.accent{border-color:rgba(168,199,250,.3);background:rgba(168,199,250,.03)}
+.arch-box-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1.5px;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.arch-method{
+  display:flex;align-items:center;gap:10px;padding:7px 10px;
+  border-radius:7px;margin-bottom:4px;background:var(--sf2);font-size:12px;
+}
+.arch-method code{color:var(--ac);font-family:monospace;font-size:11px;flex:1}
+.arch-arrow{display:flex;align-items:center;justify-content:center;padding:0 8px;color:var(--mu);font-size:22px;flex-shrink:0}
+@media(max-width:600px){.arch-arrow{transform:rotate(90deg);padding:8px 0}}
+
+/* READER MODES */
+.modes-section{padding:0 24px 80px;max-width:860px;margin:0 auto}
+.modes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.mode-card{
+  background:var(--sf);border:1px solid var(--bd);border-radius:12px;
+  padding:16px 14px;text-align:center;transition:border-color .2s;
+}
+.mode-card:hover{border-color:rgba(168,199,250,.25)}
+.mode-icon{font-size:22px;margin-bottom:8px}
+.mode-name{font-size:12px;font-weight:600;color:var(--tx)}
+.mode-sub{font-size:11px;color:var(--mu);margin-top:3px}
+
+/* SOURCE TEMPLATE */
+.code-section{padding:0 24px 80px;max-width:860px;margin:0 auto}
+.code-block{
+  background:var(--sf);border:1px solid var(--bd);border-radius:12px;
+  padding:20px 22px;overflow-x:auto;
+}
+.code-block pre{font-family:monospace;font-size:12px;line-height:1.9;color:var(--tx)}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.cm{color:var(--mu)}.ac{color:var(--ac)}
+
+/* FOOTER */
+.footer{
+  border-top:1px solid var(--bd);padding:28px 24px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;
+  background:linear-gradient(135deg,var(--ac),var(--ac2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.footer-note{font-size:12px;color:var(--mu)}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag">
+    <svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#4ade80"/></svg>
+    Open Source · No Install Required
+  </div>
+  <div class="hero-title">MANGA<br>HUB</div>
+  <p class="hero-desc">
+    A web-based manga reader that runs entirely in your browser.
+    Add any manga source, read offline, manage your library —
+    open <code style="background:var(--sf2);padding:2px 7px;border-radius:5px;font-size:13px">hub.html</code> and you're done.
+  </p>
+  <div class="hero-btns">
+    <a href="hub.html" class="btn-main">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Open Reader
+    </a>
+    <a href="README.md" class="btn-ghost">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      README
+    </a>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="section-label">What's inside</div>
+  <div class="section-title">Features</div>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📖</div>
+      <div class="feat-title">5 Reading Modes</div>
+      <div class="feat-desc">Long strip, Long strip with gaps, Paged LTR, Paged RTL, Paged vertical — all with smooth swipe navigation.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔄</div>
+      <div class="feat-title">Screen Rotation</div>
+      <div class="feat-desc">Portrait, Landscape (90°), Upside down (180°). Implemented via CSS transform — no system permissions needed.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📦</div>
+      <div class="feat-title">Offline Reading</div>
+      <div class="feat-desc">Download chapters to IndexedDB or a device folder. Read without internet. Export as ZIP.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔔</div>
+      <div class="feat-title">Updates Feed</div>
+      <div class="feat-desc">Checks your library for new chapters. Snapshot-based comparison — only shows truly new chapters.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🎨</div>
+      <div class="feat-title">Custom Filter</div>
+      <div class="feat-desc">Brightness, contrast, saturation, hue shift. Presets: Grayscale, Inverted, Warm, Cool.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔌</div>
+      <div class="feat-title">Source System</div>
+      <div class="feat-desc">Add any manga site as a source file. Sources run sandboxed — no access to your data or browser.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">✅</div>
+      <div class="feat-title">Chapter Tracking</div>
+      <div class="feat-desc">Auto-marks chapters read on last page. Unread badge on library covers. Bulk mark read/unread.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🗂</div>
+      <div class="feat-title">Library & Categories</div>
+      <div class="feat-desc">Organize manga into custom categories. Sort, filter, and display options. Adaptive grid layout.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📱</div>
+      <div class="feat-title">Responsive</div>
+      <div class="feat-desc">Fluid layout adapts from small phones to tablets. Navigation rail on wide screens. Works on Kiwi, Via, Firefox.</div>
+    </div>
+  </div>
+</section>
+
+<!-- READING MODES -->
+<section class="modes-section">
+  <div class="section-label">Reader</div>
+  <div class="section-title">Reading Modes</div>
+  <div class="modes-grid">
+    <div class="mode-card">
+      <div class="mode-icon">📜</div>
+      <div class="mode-name">Long strip</div>
+      <div class="mode-sub">Webtoon style</div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-icon">📋</div>
+      <div class="mode-name">Long strip</div>
+      <div class="mode-sub">With gaps</div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-icon">➡️</div>
+      <div class="mode-name">Paged LTR</div>
+      <div class="mode-sub">Left to right</div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-icon">⬅️</div>
+      <div class="mode-name">Paged RTL</div>
+      <div class="mode-sub">Right to left</div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-icon">⬇️</div>
+      <div class="mode-name">Paged vertical</div>
+      <div class="mode-sub">Snap scroll</div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="arch-section">
+  <div class="section-label">Architecture</div>
+  <div class="section-title">How It Works</div>
+  <div class="arch-boxes">
+    <div class="arch-box accent">
+      <div class="arch-box-title"><span>🏠</span> hub.html</div>
+      <div style="font-size:11px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">UI Engine</div>
+      <div class="arch-method"><code>Library + Categories</code></div>
+      <div class="arch-method"><code>Chapter Reader</code></div>
+      <div class="arch-method"><code>Updates Feed</code></div>
+      <div class="arch-method"><code>History</code></div>
+      <div class="arch-method"><code>Offline Storage</code></div>
+      <div class="arch-method"><code>Search</code></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box">
+      <div class="arch-box-title"><span>🔌</span> sources/*.html</div>
+      <div style="font-size:11px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">API Adapter (sandboxed)</div>
+      <div class="arch-method"><code>getPopular()</code></div>
+      <div class="arch-method"><code>getLatest()</code></div>
+      <div class="arch-method"><code>search()</code></div>
+      <div class="arch-method"><code>getDetails()</code></div>
+      <div class="arch-method"><code>getChapters()</code></div>
+      <div class="arch-method"><code>getPages()</code></div>
+    </div>
+  </div>
+</section>
+
+<!-- SOURCE TEMPLATE -->
+<section class="code-section">
+  <div class="section-label">Extensible</div>
+  <div class="section-title">Write a Source</div>
+  <div class="code-block"><pre><span class="cm">&lt;!-- Place next to hub.html, then add from Browse → + --&gt;</span>
+<span class="cm">&lt;script&gt;</span>
+
+<span class="kw">async function</span> <span class="fn">getPopular</span>(p) {
+  <span class="kw">const</span> data = <span class="kw">await</span> fetch(<span class="str">'https://yoursite.com/api/popular?page='</span>+p.page).then(r=&gt;r.json());
+  <span class="kw">return</span> {
+    items: data.results.map(m =&gt; ({ id: m.id, title: m.title, cover: m.thumb })),
+    hasNext: data.hasNextPage
+  };
+}
+
+<span class="cm">// Also implement: getLatest, search, getDetails, getChapters, getPages</span>
+
+<span class="ac">window.__SOURCE__</span> = {
+  MANIFEST: { id: <span class="str">'mysource'</span>, name: <span class="str">'My Source'</span>, icon: <span class="str">'📖'</span>, version: <span class="str">'1.0'</span>, langs: [<span class="str">'en'</span>] },
+  getPopular, getLatest, search, getDetails, getChapters, getPages
+};
+<span class="cm">&lt;/script&gt;</span></pre></div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-logo">HTML MANGA READER</div>
+  <div class="footer-note">Open source · Runs in any browser · No server needed</div>
+</footer>
+
+</body>
+</html>
