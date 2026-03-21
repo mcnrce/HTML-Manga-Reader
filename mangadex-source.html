@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/></head>
+<body>
+<script>
+// MangaDex Source — API layer only
+// MangaHub reads this file, extracts this script,
+// and runs it with: new Function('window', code)(fakeWindow)
+// So `window.__SOURCE__` lands on fakeWindow which Hub reads.
+
+const API         = 'https://api.mangadex.org';
+const API_MANGA   = API + '/manga';
+const API_CHAPTER = API + '/chapter';
+const CDN         = 'https://uploads.mangadex.org';
+const ML          = 20;   // MDConstants.MANGA_LIMIT
+const LL          = 100;  // MDConstants.LATEST_CHAPTER_LIMIT
+
+function cov(id, fn, q) {
+  q = q || '.256.jpg';
+  return fn ? CDN + '/covers/' + id + '/' + fn + q : null;
+}
+
+async function apiGet(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ── PARSERS ──────────────────────────────────────────────────
+
+function parseManga(d) {
+  if (!d || !d.attributes) return null;
+  const c = (d.relationships || []).find(r => r.type === 'cover_art');
+  const t = d.attributes.title;
+  return {
+    id:     d.id,
+    title:  t.en || Object.values(t)[0] || 'Unknown',
+    cover:  cov(d.id, c && c.attributes && c.attributes.fileName),
+    status: d.attributes.status
+  };
+}
+
+function parseMangaDetails(d) {
+  if (!d || !d.attributes) return null;
+  const rel = d.relationships || [];
+  const c  = rel.find(r => r.type === 'cover_art');
+  const a  = rel.find(r => r.type === 'author');
+  const ar = rel.find(r => r.type === 'artist');
+  const t  = d.attributes.title;
+  return {
+    id:          d.id,
+    title:       t.en || Object.values(t)[0] || 'Unknown',
+    description: (d.attributes.description && d.attributes.description.en) || '',
+    author:      (a  && a.attributes  && a.attributes.name)  || 'Unknown',
+    artist:      (ar && ar.attributes && ar.attributes.name) || null,
+    status:      d.attributes.status,
+    year:        d.attributes.year,
+    tags:        (d.attributes.tags || [])
+                   .map(tg => tg.attributes && tg.attributes.name && tg.attributes.name.en)
+                   .filter(Boolean),
+    cover:       cov(d.id, c && c.attributes && c.attributes.fileName, '.512.jpg'),
+    coverSmall:  cov(d.id, c && c.attributes && c.attributes.fileName, '.256.jpg')
+  };
+}
+
+function parseChapter(d) {
+  const a = d.attributes || {};
+  return {
+    id:        d.id,
+    title:     a.title     || '',
+    chapter:   a.chapter   || '?',
+    volume:    a.volume    || null,
+    pages:     a.pages     || 0,
+    publishAt: a.publishAt || null,
+    lang:      a.translatedLanguage || ''
+  };
+}
+
+// ── API METHODS ───────────────────────────────────────────────
+
+// popularMangaRequest() + popularMangaParse()
+async function getPopular(p) {
+  const page = p.page || 1;
+  const lang = p.lang || 'en';
+  const off  = (page - 1) * ML;
+  const d = await apiGet(
+    API_MANGA +
+    '?order[followedCount]=desc' +
+    '&availableTranslatedLanguage[]=' + lang +
+    '&limit=' + ML + '&offset=' + off +
+    '&includes[]=cover_art' +
+    '&contentRating[]=safe&contentRating[]=suggestive'
+  );
+  return { items: d.data.map(parseManga).filter(Boolean), hasNext: d.total > page * ML, total: d.total };
+}
+
+// latestUpdatesRequest() + latestUpdatesParse()
+async function getLatest(p) {
+  const page = p.page || 1;
+  const lang = p.lang || 'en';
+  const off  = (page - 1) * LL;
+  const d = await apiGet(
+    API_CHAPTER +
+    '?order[publishAt]=desc' +
+    '&limit=' + LL + '&offset=' + off +
+    '&translatedLanguage[]=' + lang +
+    '&includeFutureUpdates=0&includeFuturePublishAt=0&includeEmptyPages=0' +
+    '&contentRating[]=safe&contentRating[]=suggestive'
+  );
+  if (!d.data || !d.data.length) return { items: [], hasNext: false };
+  const ids = [...new Set(
+    d.data.flatMap(ch => (ch.relationships || []).filter(r => r.type === 'manga').map(r => r.id))
+  )];
+  if (!ids.length) return { items: [], hasNext: false };
+  const md = await apiGet(
+    API_MANGA + '?' + ids.map(id => 'ids[]=' + id).join('&') +
+    '&includes[]=cover_art&limit=' + ids.length +
+    '&contentRating[]=safe&contentRating[]=suggestive'
+  );
+  return { items: md.data.map(parseManga).filter(Boolean), hasNext: d.total > page * LL };
+}
+
+// searchMangaRequest() + searchMangaParse()
+async function search(p) {
+  const page = p.page  || 1;
+  const lang = p.lang  || 'en';
+  const off  = (page - 1) * ML;
+  const d = await apiGet(
+    API_MANGA +
+    '?title=' + encodeURIComponent(p.query || '') +
+    '&limit=' + ML + '&offset=' + off +
+    '&includes[]=cover_art' +
+    '&availableTranslatedLanguage[]=' + lang +
+    '&contentRating[]=safe&contentRating[]=suggestive'
+  );
+  return { items: d.data.map(parseManga).filter(Boolean), hasNext: d.total > page * ML, total: d.total };
+}
+
+// mangaDetailsRequest() + mangaDetailsParse()
+async function getDetails(p) {
+  const d = await apiGet(
+    API_MANGA + '/' + p.id +
+    '?includes[]=cover_art&includes[]=author&includes[]=artist'
+  );
+  return parseMangaDetails(d.data);
+}
+
+// chapterListRequest() + chapterListParse()
+async function getChapters(p) {
+  const lang = p.lang || 'en';
+  const d = await apiGet(
+    API_MANGA + '/' + p.id + '/feed' +
+    '?limit=500&offset=0' +
+    '&translatedLanguage[]=' + lang +
+    '&order[chapter]=desc' +
+    '&contentRating[]=safe&contentRating[]=suggestive'
+  );
+  return (d.data || []).map(parseChapter).filter(ch => ch.pages > 0);
+}
+
+// pageListRequest() + pageListParse()
+async function getPages(p) {
+  const d = await apiGet(API + '/at-home/server/' + p.chapterId);
+  if (!d.chapter) return [];
+  const { baseUrl, chapter } = d;
+  return chapter.data.map((f, i) => ({
+    index:  i,
+    url:    baseUrl + '/data/'       + chapter.hash + '/' + f,
+    urlLow: baseUrl + '/data-saver/' + chapter.hash + '/' + ((chapter.dataSaver || [])[i] || f)
+  }));
+}
+
+// ── EXPORT ────────────────────────────────────────────────────
+// MangaHub runs this script as: new Function('window', code)(fakeWindow)
+// So assigning to `window` writes to fakeWindow which Hub reads back.
+
+window.__SOURCE__ = {
+  MANIFEST: {
+    id:      'mangadex',
+    name:    'MangaDex',
+    icon:    '🟠',
+    version: '1.0',
+    langs:   ['en','ar','ja','ko','zh','fr','es','pt','it','de','ru']
+  },
+  getPopular:  getPopular,
+  getLatest:   getLatest,
+  search:      search,
+  getDetails:  getDetails,
+  getChapters: getChapters,
+  getPages:    getPages
+};
+</script>
+</body>
+</html>
