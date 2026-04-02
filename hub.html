@@ -604,6 +604,52 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Roboto',
 .code-inp.err{border-color:#f87171}
 .code-inp::placeholder{color:#3a3a3a}
 
+/* ── LOCAL LIBRARY ── */
+.local-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(90px,28vw,130px),1fr));gap:10px;padding:12px}
+.local-item{border-radius:8px;overflow:hidden;cursor:pointer;background:var(--sf2);position:relative;transition:transform .15s}
+.local-item:active{transform:scale(.96)}
+.local-item.sel-on{outline:3px solid var(--ac)}
+.local-item .sel-check{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.6);background:rgba(0,0,0,.4);display:none;
+  align-items:center;justify-content:center;z-index:2}
+.local-item.sel-on .sel-check{display:flex;background:var(--ac);border-color:var(--ac)}
+.local-item .sel-check svg{display:none}.local-item.sel-on .sel-check svg{display:block}
+.local-cover{width:100%;aspect-ratio:2/3;object-fit:cover;background:var(--sf3);display:block}
+.local-cover-empty{width:100%;aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--sf3)}
+.local-title{font-size:11px;padding:5px 6px 6px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* title overlay variant */
+.local-title-overlay{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:18px 6px 5px;font-size:11px;line-height:1.35;
+  background:linear-gradient(transparent,rgba(0,0,0,.85));
+  color:#fff;font-weight:500;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+/* loading state for item without handle */
+.local-item.loading-handle{opacity:.55;cursor:wait}
+.local-item.loading-handle::after{
+  content:'⟳';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);font-size:22px;color:#fff;
+  animation:spin .7s linear infinite;
+}
+.local-badge{position:absolute;top:4px;left:4px;min-width:22px;height:18px;border-radius:99px;background:#4ade80;color:#000;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+/* chapter list */
+.lch-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s;position:relative}
+.lch-item:active{background:rgba(255,255,255,.05)}
+.lch-item.read .lch-num,.lch-item.read .lch-info *{color:#555!important;opacity:.7}
+.lch-num{font-size:13px;font-weight:500;min-width:54px;color:var(--ac)}
+.lch-info{flex:1;min-width:0}
+.lch-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lch-sub{font-size:11px;color:var(--mu);margin-top:2px}
+.lch-acts{display:flex;gap:2px;flex-shrink:0}
+.lch-act-btn{width:32px;height:32px;border-radius:50%;border:none;background:none;color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s}
+.lch-act-btn:active{color:var(--tx);background:rgba(255,255,255,.08)}
+/* merge badge */
+.merge-badge{font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.25);flex-shrink:0}
+/* local sel topbar */
+.local-sel-bar{display:none;align-items:center;gap:6px;padding:6px 8px;background:var(--sf2);border-bottom:1px solid var(--bd);flex-shrink:0}
+.local-sel-bar.on{display:flex}
+
 /* SPINNER / STATES */
 .spw{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;flex:1}
 .sp{width:28px;height:28px;border-radius:50%;border:3px solid var(--sf3);border-top-color:var(--ac);animation:spin .7s linear infinite}
@@ -751,6 +797,9 @@ svg{flex-shrink:0}
     <div class="topbar">
       <div class="topbar-title" id="lib-topbar-title">Library</div>
       <div class="topbar-actions">
+        <button class="ic-btn" id="lib-refresh-btn" onclick="libRefresh()" title="Refresh / Sync">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L10 10"/></svg>
+        </button>
         <button class="ic-btn" onclick="toggleLibSearch()" title="Search">
           <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         </button>
@@ -777,6 +826,20 @@ svg{flex-shrink:0}
 
     <!-- Library content -->
     <div class="page-wrap" id="lib-content"></div>
+
+    <!-- Local manga detail (overlay inside library page) -->
+    <div id="local-det-overlay" style="display:none;flex-direction:column;position:absolute;inset:0;background:var(--bg);z-index:50">
+      <div class="topbar">
+        <button class="ic-btn" onclick="closeLocalDetOverlay()">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <span class="topbar-title" id="local-det-overlay-title" style="font-size:16px"></span>
+        <button class="ic-btn" onclick="localMangaMenu(_localCurKey)" title="More">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+      <div class="page-wrap" id="local-det-overlay-content"></div>
+    </div>
   </div>
 
   <!-- ═══════════════════════════════ UPDATES PAGE ═══════════════════════════════ -->
@@ -944,13 +1007,6 @@ svg{flex-shrink:0}
     <div class="page-wrap">
       <div class="more-section">
         <div class="more-divider" style="margin:0 0 4px"></div>
-        <div class="more-item" onclick="showDownloadsPage()">
-          <div class="more-ic">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          </div>
-          <div class="more-label">Downloaded chapters</div>
-          <div class="more-arrow">›</div>
-        </div>
         <div class="more-divider"></div>
         <div class="more-section-title">Settings</div>
         <div class="more-item" onclick="showSettingsPage()">
@@ -986,62 +1042,41 @@ svg{flex-shrink:0}
     </div>
   </div>
 
-  <!-- ── DOWNLOADS SUB-PAGE (shown over More) ── -->
-  <div id="page-downloads" style="display:none;flex-direction:column;position:fixed;inset:0 0 var(--nav-h) 0;background:var(--bg);z-index:500;max-width:500px;margin:0 auto">
-    <div class="topbar">
-      <button class="ic-btn" onclick="closeSubPage('page-downloads')">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-      </button>
-      <div class="topbar-title">Downloaded chapters</div>
-    </div>
-    <div class="page-wrap" id="dl-page-content"></div>
-  </div>
-
   <!-- ── SETTINGS SUB-PAGE ── -->
-  <div id="page-settings" style="display:none;flex-direction:column;position:fixed;inset:0 0 var(--nav-h) 0;background:var(--bg);z-index:500;max-width:500px;margin:0 auto">
+  <div id="page-settings" style="display:none;flex-direction:column;position:fixed;inset:0 0 var(--nav-h) 0;background:var(--bg);z-index:500;max-width:600px;margin:0 auto">
     <div class="topbar">
       <button class="ic-btn" onclick="closeSubPage('page-settings')">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       </button>
       <div class="topbar-title">Settings</div>
     </div>
-
     <!-- FS reconnect banner -->
     <div id="fs-banner" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(168,199,250,.1);border-bottom:1px solid rgba(168,199,250,.2);flex-shrink:0">
       <svg width="18" height="18" fill="none" stroke="var(--ac)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <div style="flex:1;font-size:12px;color:var(--ac)">Reconnect "<span id="fs-banner-name"></span>" to use offline downloads</div>
       <button onclick="pickStorageFolder()" style="background:var(--ac);border:none;color:#000;font-family:inherit;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer">Connect</button>
     </div>
-
     <div class="page-wrap">
       <div class="more-section">
-
-        <!-- STORAGE SECTION -->
         <div class="more-section-title">Download Storage</div>
-
-        <!-- Current usage info -->
         <div style="padding:10px 16px 6px">
           <div style="background:var(--sf2);border-radius:10px;padding:12px 14px">
             <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Storage usage</div>
             <div id="storage-usage" style="font-size:13px;color:var(--tx)">Calculating...</div>
           </div>
         </div>
-
-        <!-- Option A: Browser storage (IndexedDB) -->
         <div style="padding:6px 16px">
           <div style="background:var(--sf2);border-radius:10px;padding:14px;margin-bottom:8px">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
               <span style="font-size:18px">🌐</span>
               <div style="flex:1">
                 <div style="font-size:13px;font-weight:500">Browser Storage</div>
-                <div style="font-size:11px;color:var(--mu)">IndexedDB — managed by browser, may be cleared</div>
+                <div style="font-size:11px;color:var(--mu)">IndexedDB — managed by browser</div>
               </div>
               <div id="idb-status" style="font-size:11px;color:#4ade80">Active</div>
             </div>
             <button onclick="switchToIDB()" style="width:100%;background:var(--sf3);border:1px solid var(--bd);color:var(--tx);font-family:inherit;font-size:12px;padding:8px;border-radius:8px;cursor:pointer">Use Browser Storage</button>
           </div>
-
-          <!-- Option B: File System Access API -->
           <div style="background:var(--sf2);border-radius:10px;padding:14px" id="fs-option">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
               <span style="font-size:18px">📁</span>
@@ -1050,7 +1085,7 @@ svg{flex-shrink:0}
                   <span style="font-size:13px;font-weight:500">Device Folder</span>
                   <span id="fs-badge" style="font-size:11px;font-weight:600"></span>
                 </div>
-                <div style="font-size:11px;color:var(--mu)">File System Access API — you choose the folder</div>
+                <div style="font-size:11px;color:var(--mu)">File System Access API</div>
               </div>
             </div>
             <div id="fs-status" style="font-size:11px;color:#555;margin-bottom:8px;padding:6px 8px;background:var(--sf3);border-radius:6px">Not connected</div>
@@ -1058,12 +1093,9 @@ svg{flex-shrink:0}
             <button onclick="pickStorageFolder()" id="fs-pick-btn" style="width:100%;background:var(--ac);color:#000;border:none;font-family:inherit;font-size:12px;font-weight:600;padding:8px;border-radius:8px;cursor:pointer">
               📂 Choose Folder…
             </button>
-            <div style="font-size:10px;color:#555;margin-top:6px;line-height:1.5">
-              ⚠ Note: Permission must be re-granted each browser session (browser security limitation). Folder must be re-selected after closing the browser.
-            </div>
+            <div style="font-size:10px;color:#555;margin-top:6px;line-height:1.5">⚠ Permission must be re-granted each browser session.</div>
           </div>
         </div>
-
         <div class="more-divider"></div>
         <div class="more-section-title">Library</div>
         <div class="more-item">
@@ -1286,8 +1318,13 @@ svg{flex-shrink:0}
 
     <!-- TOP BAR -->
     <div class="rdr-topbar" id="rdr-topbar">
-      <button class="ic-btn" onclick="closeReader()" style="color:#fff">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <button onclick="closeReader()" style="
+        background:rgba(255,255,255,.15);border:none;color:#fff;
+        font-family:inherit;font-size:13px;font-weight:600;
+        padding:7px 12px;border-radius:10px;cursor:pointer;
+        display:flex;align-items:center;gap:5px;flex-shrink:0;margin-left:2px">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
       </button>
       <div class="rdr-topbar-title">
         <b id="rdr-manga-title"></b>
@@ -1472,6 +1509,16 @@ svg{flex-shrink:0}
       <!-- ── GENERAL panel ── -->
       <div class="rdr-stab-panel" id="rpanel-gen">
         <div class="rdr-sec">Display</div>
+        <div class="rdr-check-row" style="cursor:default">
+          <span class="rdr-check-label">Preload batch size (local)</span>
+          <select id="sel-batch-size" onchange="localStorage.setItem('rdr_batch',this.value)"
+            style="background:var(--sf3);border:1px solid var(--bd);color:var(--tx);font-family:inherit;font-size:12px;padding:4px 8px;border-radius:7px;cursor:pointer;outline:none">
+            <option value="3">3 pages</option>
+            <option value="5" selected>5 pages</option>
+            <option value="10">10 pages</option>
+            <option value="20">20 pages</option>
+          </select>
+        </div>
         <label class="rdr-check-row" onclick="rdrToggleSetting('showPageNum')">
           <div class="rdr-checkbox on" id="chk-showPageNum"></div>
           <span class="rdr-check-label">Show page number</span>
@@ -1808,10 +1855,6 @@ function switchPage(p){
 
 function showSubPage(id){document.getElementById(id).style.display='flex';}
 function closeSubPage(id){document.getElementById(id).style.display='none';}
-function showDownloadsPage(){
-  showSubPage('page-downloads');
-  renderDlPage();
-}
 function renderDlPage(){
   const dls=S.getDls();
   const content=document.getElementById('dl-page-content');
@@ -1907,11 +1950,15 @@ let libSearchVisible=false;
 
 function renderLibrary(){
   const cats=S.getCats(),lib=S.getLib();
-  // Build tabs
+  // Build tabs — always add Local at end
   const tabsRow=document.getElementById('lib-tabs-row');
   const allTab=`<button class="ctab${activeCatId==='all'?' on':''}" onclick="setLibCat('all')">Default</button>`;
   const catTabs=cats.map(c=>`<button class="ctab${activeCatId===c.id?' on':''}" onclick="setLibCat('${sanitizeId(c.id)}')">${esc(c.name)}</button>`).join('');
-  tabsRow.innerHTML=allTab+catTabs;
+  const localTab=`<button class="ctab${activeCatId==='__local__'?' on':''}" onclick="setLibCat('__local__')">📁 Local</button>`;
+  tabsRow.innerHTML=allTab+catTabs+localTab;
+  // Update topbar title
+  const _tEl=document.getElementById('lib-topbar-title');
+  if(_tEl) _tEl.textContent=activeCatId==='__local__'?'Local Library':'Library';
   // Content
   renderLibContent();
   updateBrowseBadge();
@@ -1920,6 +1967,9 @@ function renderLibrary(){
 function setLibCat(id){activeCatId=id;renderLibrary();}
 
 function renderLibContent(){
+  // Local category uses async rendering
+  if(activeCatId==='__local__'){ renderLocalLibContent(); return; }
+
   const lib=S.getLib(), cats=S.getCats();
   const content=document.getElementById('lib-content');
   const snaps=S.getSnapshots();
@@ -2112,7 +2162,7 @@ function renderHistory(){
   content.innerHTML=Object.entries(groups).map(([date,items])=>`
     <div class="hist-date">${date}</div>
     ${items.map(h=>`
-    <div class="hist-item" onclick="openFromLibrary('${sanitizeId(h.sourceId)}','${sanitizeId(h.mangaId)}')">
+    <div class="hist-item" data-src="${esc(h.sourceId)}" data-mid="${esc(h.mangaId)}" onclick="histItemClick(this)">
       ${h.cover?`<img class="hist-thumb" src="${sanitizeUrl(h.cover)}" onerror="this.style.display='none'">`:`<div class="hist-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px">📖</div>`}
       <div class="hist-info">
         <div class="hist-title">${esc(h.mangaTitle)}</div>
@@ -2123,6 +2173,10 @@ function renderHistory(){
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>`).join('')}`).join('');
+}
+function histItemClick(el){
+  const src=el.dataset.src, mid=el.dataset.mid;
+  if(src && mid) openFromLibrary(src, mid);
 }
 function removeHistory(mangaId,e){
   e.stopPropagation();
@@ -2347,7 +2401,7 @@ function closeMangaDetail(){
 }
 
 // ── READER ──
-async function openReader(idx){
+async function _openReaderNormal(idx){
   B.chIdx=idx;
   document.getElementById('manga-detail').style.display='none';
   const rv=document.getElementById('reader-view');
@@ -2739,7 +2793,7 @@ function rdrAutoHide(){
                   ||document.getElementById('rdr-rot-sheet').classList.contains('open')
                   ||document.getElementById('rdr-settings-sheet').classList.contains('open');
     if(rdrUIVisible&&!sheetOpen) rdrHideUI();
-  },3500);
+  },8000);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -2776,14 +2830,6 @@ function applyReadMode(){
 // ─────────────────────────────────────────────────────────────────
 function readerPrev(){if(B.chIdx<B.chapters.length-1)openReader(B.chIdx+1);}
 function readerNext(){if(B.chIdx>0)openReader(B.chIdx-1);}
-function closeReader(){
-  if(rdrObserver){rdrObserver.disconnect();rdrObserver=null;}
-  clearTimeout(rdrUITimer);
-  _resetRotation();
-  document.getElementById('reader-view').classList.remove('open');
-  document.getElementById('manga-detail').style.display='flex';
-}
-
 // ── ROTATION ──
 let _rdrRot='free';
 
@@ -3134,14 +3180,7 @@ const _scaleCSS=`
 `;
 (function(){const s=document.createElement('style');s.textContent=_scaleCSS;document.head.appendChild(s);})();
 
-function readerPrev(){if(B.chIdx<B.chapters.length-1)openReader(B.chIdx+1);}
-function readerNext(){if(B.chIdx>0)openReader(B.chIdx-1);}
-function closeReader(){
-  if(rdrObserver)rdrObserver.disconnect();
-  clearTimeout(rdrUITimer);
-  document.getElementById('reader-view').classList.remove('open');
-  document.getElementById('manga-detail').style.display='flex';
-}
+// (duplicate removed)
 
 function addHistory(chIdx){
   if(!B.manga)return;
@@ -3207,6 +3246,11 @@ function showBrowseError(msg){
 
 // ── OPEN FROM LIBRARY ──
 async function openFromLibrary(sourceId,mangaId){
+  // Local manga — open directly without needing a source
+  if(sourceId==='local'){
+    await openLocalMangaFromLib(mangaId);
+    return;
+  }
   const source=allSrc().find(s=>s.id===sourceId);
   if(!source){showToast('Source not found',true);return;}
   B.sourceId=sourceId;B.lang='en';B.view='detail';
@@ -3214,7 +3258,6 @@ async function openFromLibrary(sourceId,mangaId){
   document.getElementById('browse-home').style.display='none';
   document.getElementById('browse-detail').style.display='none';
   document.getElementById('manga-detail').style.display='flex';
-  // reader closed via classList
   document.getElementById('det-content').innerHTML='<div class="spw"><div class="sp"></div></div>';
   try{await loadSource(source);await openMangaDetail(mangaId);}
   catch(e){showToast('Error: '+e.message,true);}
@@ -3615,7 +3658,12 @@ async function pickStorageFolder(){
     S.saveStorageMode('fs');
     localStorage.setItem('mhub_fs_dirname', dir.name);
     updateStorageUI();
-    showToast('✓ Folder "'+dir.name+'" selected');
+    showToast('✓ Folder "'+dir.name+'" connected');
+    // Re-render to hide banner, then auto-scan
+    if(activeCatId==='__local__'){
+      renderLibContent();
+      scanLocalLibrary();
+    }
   }catch(e){
     if(e.name!=='AbortError') showToast('Could not access folder: '+e.message, true);
   }
@@ -3999,11 +4047,14 @@ function selDeleteDownloads(){
 
 // ═══════════════════════════════ HELPERS ═══════════════════════════════
 function sanitizeUrl(u){
-  // Only allow http/https/data URLs in src attributes
   const s=String(u||'');
-  if(/^https?:\/\//i.test(s)||/^data:image\//i.test(s)) return s;
-  if(s==='') return '';
-  return ''; // reject javascript:, blob:, etc.
+  if(!s) return '';
+  // Allow http/https, data:image, blob: (ObjectURLs), /local-img/ (SW virtual)
+  if(/^https?:\/\//i.test(s)) return s;
+  if(/^data:image\//i.test(s)) return s;
+  if(/^blob:/i.test(s)) return s;
+  if(s.startsWith('/local-img/')) return s;
+  return ''; // reject javascript: etc.
 }
 function esc(s){
   // Sanitize for HTML attribute context: escapes &, <, >, ", '
@@ -4418,6 +4469,706 @@ window.addEventListener('popstate', e => {
     return;
   }
 });
+
+// ══════════════════════════════════════════════════════════════
+//  LOCAL LIBRARY — Clean rewrite
+//  IDB = source of truth | FS Handles = session only
+//  Scan = directory listing only (no file reads)
+//  Read = lazy load per chapter on demand
+// ══════════════════════════════════════════════════════════════
+
+// ── Config ──
+const LOCAL_DB_NAME = 'mihon_local_v2';
+const LOCAL_DB_VER  = 2;
+let _localCoverPage = parseInt(localStorage.getItem('mhub_local_cover_page')||'0');
+
+// ── Runtime state ──
+let _localHandles  = {};  // key → {dirHandle, chapters:[{name,dirHandle,images:null}]}
+let _localObjUrls  = [];  // Object URLs to revoke on reader close
+let _localCurKey   = null;
+let _localCurChaps = [];  // current manga chapters for reader
+
+// ════════════════════════════════════════════════════════════════
+//  IDB HELPERS
+// ════════════════════════════════════════════════════════════════
+let _ldb = null;
+async function _ldbOpen(){
+  if(_ldb) return _ldb;
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open(LOCAL_DB_NAME, LOCAL_DB_VER);
+    r.onupgradeneeded = e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains('manga'))
+        db.createObjectStore('manga',{keyPath:'key'});
+      if(!db.objectStoreNames.contains('chapters')){
+        const s=db.createObjectStore('chapters',{keyPath:'id'});
+        s.createIndex('byManga','mangaKey',{unique:false});
+      }
+      if(!db.objectStoreNames.contains('covers'))
+        db.createObjectStore('covers',{keyPath:'key'});
+    };
+    r.onsuccess=e=>{_ldb=e.target.result;res(_ldb);};
+    r.onerror=e=>rej(e.target.error);
+  });
+}
+async function _ldbPut(store,obj){
+  const db=await _ldbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readwrite');
+    tx.objectStore(store).put(obj);
+    tx.oncomplete=()=>res(); tx.onerror=e=>rej(e.target.error);
+  });
+}
+async function _ldbGet(store,key){
+  const db=await _ldbOpen();
+  return new Promise(res=>{
+    const r=db.transaction(store,'readonly').objectStore(store).get(key);
+    r.onsuccess=e=>res(e.target.result||null);
+    r.onerror=()=>res(null);
+  });
+}
+async function _ldbGetAll(store){
+  const db=await _ldbOpen();
+  return new Promise((res,rej)=>{
+    const r=db.transaction(store,'readonly').objectStore(store).getAll();
+    r.onsuccess=e=>res(e.target.result||[]); r.onerror=e=>rej(e.target.error);
+  });
+}
+async function _ldbGetByIndex(store,idx,key){
+  const db=await _ldbOpen();
+  return new Promise(res=>{
+    const r=db.transaction(store,'readonly').objectStore(store).index(idx).getAll(key);
+    r.onsuccess=e=>res(e.target.result||[]); r.onerror=()=>res([]);
+  });
+}
+async function _ldbDelete(store,key){
+  const db=await _ldbOpen();
+  return new Promise(res=>{
+    const tx=db.transaction(store,'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete=()=>res();
+  });
+}
+
+// ── helpers ──
+function _chNum(name){
+  const m=name.match(/(\d+(?:\.\d+)?)/);
+  return m?parseFloat(m[1]):0;
+}
+function _parseComicInfo(xml){
+  try{
+    const doc=new DOMParser().parseFromString(xml,'text/xml');
+    const g=tag=>doc.querySelector(tag)?.textContent?.trim()||'';
+    return{
+      title:g('Title'),series:g('Series'),number:g('Number'),
+      summary:g('Summary'),author:g('Writer')||g('Penciller'),
+      genre:g('Genre'),web:g('Web'),
+      status:doc.querySelector('[localName="PublishingStatusTachiyomi"]')?.textContent?.trim()||'',
+      source:doc.querySelector('[localName="SourceMihon"]')?.textContent?.trim()||''
+    };
+  }catch(e){return null;}
+}
+async function _fileToDataUrl(file,w,h){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement('canvas');
+        c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/jpeg',0.72));
+      };
+      img.onerror=rej;
+      img.src=e.target.result;
+    };
+    reader.onerror=rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── SW helpers (unchanged) ──
+async function _swReady(){
+  if(!navigator.serviceWorker) return null;
+  try{
+    // Timeout: if SW not ready in 800ms, use ObjectURL fallback
+    const sw = await Promise.race([
+      navigator.serviceWorker.ready.then(r=>r.active||r.waiting||r.installing),
+      new Promise(res=>setTimeout(()=>res(null), 800))
+    ]);
+    return sw;
+  }catch(e){ return null; }
+}
+function _imgPath(mangaKey,chName,imgName){
+  const enc=s=>encodeURIComponent(s).replace(/%2F/g,'%252F');
+  return '/local-img/'+enc(mangaKey)+'/'+enc(chName)+'/'+enc(imgName);
+}
+async function _swRegisterChapter(mangaKey,chHandle){
+  const sw=await _swReady();
+  if(!sw||!chHandle.images) return;
+  const handles={};
+  chHandle.images.forEach(img=>{
+    handles[_imgPath(mangaKey,chHandle.name,img.name)]=img.fh;
+  });
+  sw.postMessage({type:'REGISTER_HANDLES',handles});
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SYNC  — directory listing only, NO file reads
+// ════════════════════════════════════════════════════════════════
+async function scanLocalLibrary(){
+  if(!_fsDir){ showToast('Connect a folder in Settings first',true); return; }
+  const btn=document.getElementById('lib-refresh-btn');
+  if(btn) btn.style.animation='spin .7s linear infinite';
+  let added=0,removed=0;
+  try{
+    const dbManga   = await _ldbGetAll('manga');
+    const dbByKey   = Object.fromEntries(dbManga.map(m=>[m.key,m]));
+    const fsKeys    = new Set();
+
+    for await(const [sName,sDirH] of _fsDir.entries()){
+      if(sDirH.kind!=='directory') continue;
+      for await(const [mName,mDirH] of sDirH.entries()){
+        if(mDirH.kind!=='directory') continue;
+        const key=sName+'__'+mName;
+        fsKeys.add(key);
+
+        // Collect chapter dirs (NO file reads)
+        const rawChs=[];
+        for await(const [n,h] of mDirH.entries())
+          if(h.kind==='directory') rawChs.push({name:n,dirHandle:h});
+        rawChs.sort((a,b)=>_chNum(a.name)-_chNum(b.name));
+        if(!rawChs.length) continue;
+
+        // Store handles for this session
+        _localHandles[key]={
+          dirHandle:mDirH,
+          chapters:rawChs.map(c=>({name:c.name,dirHandle:c.dirHandle,images:null}))
+        };
+
+        // Skip if unchanged
+        const dbRec=dbByKey[key];
+        if(dbRec && dbRec.chapterCount===rawChs.length) continue;
+
+        // Save/update minimal record
+        await _ldbPut('manga',{
+          key, sourceName:sName, mangaTitle:mName,
+          title:dbRec?.title||mName,
+          info:dbRec?.info||null,
+          chapterCount:rawChs.length,
+          chapterNames:rawChs.map(c=>c.name),
+          coverCached:!!dbRec?.coverCached,
+          updatedAt:Date.now()
+        });
+
+        // Add new chapter stubs only
+        for(const ch of rawChs){
+          const cid=key+'__'+ch.name;
+          if(!await _ldbGet('chapters',cid))
+            await _ldbPut('chapters',{id:cid,mangaKey:key,name:ch.name,
+              num:_chNum(ch.name),title:ch.name,imageCount:0});
+        }
+        added++;
+      }
+    }
+
+    // Remove deleted
+    for(const m of dbManga){
+      if(!fsKeys.has(m.key)){
+        await _ldbDelete('manga',m.key);
+        await _ldbDelete('covers',m.key);
+        const chs=await _ldbGetByIndex('chapters','byManga',m.key);
+        for(const ch of chs) await _ldbDelete('chapters',ch.id);
+        removed++;
+      }
+    }
+  }catch(e){ showToast('Sync error: '+e.message,true); }
+
+  if(btn) btn.style.animation='';
+  if(activeCatId==='__local__') renderLibContent();
+  const total=(await _ldbGetAll('manga')).length;
+  showToast('✓ '+total+' manga'+(added||removed?' (+'+added+' -'+removed+')':''));
+}
+
+// ════════════════════════════════════════════════════════════════
+//  RENDER — library grid
+// ════════════════════════════════════════════════════════════════
+async function renderLocalLibContent(){
+  const content=document.getElementById('lib-content');
+
+  // Reconnect banner
+  if(!_fsDir){
+    const cached=await _ldbGetAll('manga').catch(()=>[]);
+    const bannerHtml=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+      background:rgba(251,191,36,.08);border-bottom:1px solid rgba(251,191,36,.2)">
+      <svg width="16" height="16" fill="none" stroke="#fbbf24" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span style="flex:1;font-size:12px;color:#fbbf24">Folder not connected</span>
+      <button onclick="pickStorageFolder().then(()=>{if(_fsDir)scanLocalLibrary()})"
+        style="background:#fbbf24;border:none;color:#000;font-family:inherit;font-size:11px;
+               font-weight:700;padding:5px 12px;border-radius:7px;cursor:pointer">📂 Reconnect</button>
+    </div>`;
+    if(!cached.length){
+      content.innerHTML=bannerHtml+`<div class="empty-state">
+        <div class="empty-face">📁</div><div class="empty-label">Local Library</div>
+        <div class="empty-sub">Connect a folder, then tap ↻</div>
+      </div>`;
+      return;
+    }
+    content.innerHTML=bannerHtml;
+    await _renderLocalGrid(cached,content,true);
+    return;
+  }
+  const cached=await _ldbGetAll('manga').catch(()=>[]);
+  if(!cached.length){
+    content.innerHTML=`<div class="empty-state">
+      <div class="empty-face">📁</div><div class="empty-label">Local Library</div>
+      <div class="empty-sub">Tap ↻ to scan your folder</div>
+    </div>`;
+    return;
+  }
+  await _renderLocalGrid(cached,content,false);
+}
+
+async function _renderLocalGrid(mangaList,container,append){
+  const merges=_getLocalMerges();
+  const mergedKeys=new Set(merges.flatMap(m=>m.keys));
+  const items=[];
+  merges.forEach(mg=>{
+    const parts=mangaList.filter(m=>mg.keys.includes(m.key));
+    if(!parts.length) return;
+    items.push({key:'__merge__'+mg.id,title:mg.name,
+      chapterCount:parts.reduce((s,m)=>s+(m.chapterCount||0),0),isMerge:true});
+  });
+  mangaList.filter(m=>!mergedKeys.has(m.key)).forEach(m=>items.push(m));
+  items.sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+
+  const filtered=libSearchVal
+    ? items.filter(m=>(m.title||'').toLowerCase().includes(libSearchVal.toLowerCase()))
+    : items;
+
+  if(!filtered.length){
+    if(!append) container.innerHTML='<div class="empty-state"><div class="empty-face">(·_·)</div><div class="empty-label">No results</div></div>';
+    return;
+  }
+
+  // Load covers
+  const coverMap={};
+  await Promise.all(filtered.map(async item=>{
+    if(item.isMerge) return;
+    const rec=await _ldbGet('covers',item.key).catch(()=>null);
+    if(rec) coverMap[item.key]=rec.dataUrl;
+  }));
+
+  const sizes={small:'85px',medium:'110px',large:'155px'};
+  const col=sizes[libGrid]||'110px';
+  const grid=document.createElement('div');
+  grid.className='lib-grid';
+  grid.style.gridTemplateColumns=`repeat(auto-fill,minmax(${col},1fr))`;
+  grid.innerHTML=filtered.map(item=>{
+    const cover=coverMap[item.key]||null;
+    return `<div class="lib-item" data-lkey="${esc(item.key)}" onclick="localLibItemClick(this)">
+      ${cover?`<img class="lib-cover" src="${cover}" loading="lazy">`:`<div class="lib-cover-empty">📁</div>`}
+      ${libShowBadge?`<div class="lib-badge">${item.chapterCount||'?'}</div>`:''}
+      ${libShowTitle?`<div class="lib-title">${esc(item.title||item.mangaTitle||'')}</div>`:''}
+    </div>`;
+  }).join('');
+  container.appendChild(grid);
+
+  // Lazy build missing covers
+  _buildMissingCovers(filtered.filter(i=>!i.isMerge&&!coverMap[i.key]));
+}
+
+async function _buildMissingCovers(items){
+  for(const item of items){
+    const hInfo=_localHandles[item.key];
+    if(!hInfo?.chapters?.length) continue;
+    const firstCh=hInfo.chapters[0];
+    const imgs=[];
+    try{
+      for await(const [fn,fh] of firstCh.dirHandle.entries())
+        if(fh.kind==='file'&&/\.(jpe?g|png|webp|gif|avif)$/i.test(fn)) imgs.push({name:fn,fh});
+      imgs.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+      if(!imgs.length) continue;
+      const file=await imgs[Math.min(_localCoverPage,imgs.length-1)].fh.getFile();
+      const dataUrl=await _fileToDataUrl(file,120,180);
+      await _ldbPut('covers',{key:item.key,dataUrl});
+      // Update cover in existing img element if visible
+      const el=document.querySelector(`.lib-item[data-lkey="${CSS.escape(item.key)}"] img.lib-cover`);
+      if(el){ el.src=dataUrl; }
+      else{
+        // Replace emoji placeholder
+        const wrapper=document.querySelector(`.lib-item[data-lkey="${CSS.escape(item.key)}"]`);
+        if(wrapper){
+          const em=wrapper.querySelector('.lib-cover-empty');
+          if(em){
+            const img=document.createElement('img');
+            img.className='lib-cover'; img.src=dataUrl; img.loading='lazy';
+            wrapper.insertBefore(img,em); em.remove();
+          }
+        }
+      }
+      // Update IDB record
+      const m=await _ldbGet('manga',item.key);
+      if(m) await _ldbPut('manga',{...m,coverCached:true});
+    }catch(e){}
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  OPEN MANGA DETAIL
+// ════════════════════════════════════════════════════════════════
+function localLibItemClick(el){
+  const key=el.dataset.lkey;
+  if(key) openFromLibrary('local',key);
+}
+
+async function openLocalMangaFromLib(mangaKey){
+  // Acquire handles if needed
+  if(!_localHandles[mangaKey]&&_fsDir&&!mangaKey.startsWith('__merge__')){
+    try{
+      const m=await _ldbGet('manga',mangaKey);
+      if(m){
+        const sH=await _fsDir.getDirectoryHandle(m.sourceName);
+        const mH=await sH.getDirectoryHandle(m.mangaTitle);
+        const rawChs=[];
+        for await(const [n,h] of mH.entries())
+          if(h.kind==='directory') rawChs.push({name:n,dirHandle:h});
+        rawChs.sort((a,b)=>_chNum(a.name)-_chNum(b.name));
+        _localHandles[mangaKey]={dirHandle:mH,
+          chapters:rawChs.map(c=>({name:c.name,dirHandle:c.dirHandle,images:null}))};
+      }
+    }catch(e){}
+  }
+
+  // Show overlay
+  _localCurKey=mangaKey;
+  const overlay=document.getElementById('local-det-overlay');
+  overlay.style.display='flex';
+  document.getElementById('local-det-overlay-title').textContent='Loading…';
+  document.getElementById('local-det-overlay-content').innerHTML=
+    '<div class="spw"><div class="sp"></div></div>';
+
+  // Load from IDB
+  let manga,chapters;
+  if(mangaKey.startsWith('__merge__')){
+    const mid=mangaKey.replace('__merge__','');
+    const mg=_getLocalMerges().find(m=>m.id===mid);
+    if(!mg){showToast('Merged manga not found',true);closeLocalDetOverlay();return;}
+    const all=await _ldbGetAll('manga');
+    const parts=all.filter(m=>mg.keys.includes(m.key));
+    chapters=[];
+    for(const p of parts){
+      const chs=await _ldbGetByIndex('chapters','byManga',p.key);
+      chapters.push(...chs);
+    }
+    chapters.sort((a,b)=>a.num-b.num);
+    manga={key:mangaKey,title:mg.name,info:parts[0]?.info,chapterCount:chapters.length};
+  }else{
+    manga=await _ldbGet('manga',mangaKey);
+    if(!manga){showToast('Not found in library — tap ↻ to sync',true);closeLocalDetOverlay();return;}
+    chapters=await _ldbGetByIndex('chapters','byManga',mangaKey);
+    chapters.sort((a,b)=>a.num-b.num);
+  }
+
+  // Cover
+  const coverRec=await _ldbGet('covers',mangaKey).catch(()=>null);
+  const cover=coverRec?.dataUrl||null;
+
+  // Set B context for reader
+  B.sourceId='local';
+  B.manga={id:mangaKey,title:manga.title||manga.mangaTitle||'',cover,coverSmall:cover};
+  B.chapters=chapters.map((c,i)=>({id:'lc_'+i,chapter:c.num,title:c.title||c.name,pages:c.imageCount||0}));
+  _localCurChaps=chapters;
+
+  document.getElementById('local-det-overlay-title').textContent=manga.title||manga.mangaTitle||'';
+
+  // Render
+  const readSet=S.getRead();
+  const tags=(manga.info?.genre||'').split(',').map(t=>t.trim()).filter(Boolean);
+  const chHtml=chapters.length?chapters.map((ch,i)=>{
+    const rKey='local__'+mangaKey+'__'+ch.num;
+    const isRead=readSet.has(rKey);
+    return `<div class="ch-item${isRead?' read':''}" onclick="openLocalChapter(${i})">
+      <div class="ch-num">Ch.${esc(String(ch.num))}</div>
+      <div class="ch-info">
+        <div style="font-size:13px;font-weight:500">${esc(ch.title||ch.name)}</div>
+        <div class="ch-sub">${ch.imageCount||'?'} pages${isRead?' · Read':''}</div>
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty-state" style="padding:30px"><div class="empty-label">No chapters</div></div>';
+
+  document.getElementById('local-det-overlay-content').innerHTML=`<div class="det-wrap">
+    <div class="det-hero">
+      <div class="det-cover">${cover
+        ?`<img src="${cover}" alt="${esc(manga.title||'')}">`
+        :`<div style="height:170px;display:flex;align-items:center;justify-content:center;font-size:40px">📁</div>`}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="det-title">${esc(manga.title||manga.mangaTitle||'')}</div>
+        ${manga.info?.author?`<div class="det-meta"><b>${esc(manga.info.author)}</b></div>`:''}
+        <div class="det-badges">
+          <span class="det-badge" style="color:#4ade80;border-color:#4ade8044">📁 Local</span>
+          ${manga.info?.source?`<span class="det-badge">${esc(manga.info.source)}</span>`:''}
+          ${tags.slice(0,4).map(t=>`<span class="det-badge">${esc(t)}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+    ${manga.info?.summary?`<p class="det-desc">${esc(manga.info.summary)}</p>`:''}
+    <div class="det-actions">
+      ${chapters.length?`<button class="det-action fill" onclick="openLocalChapter(0)">▶ Read first</button>`:''}
+      <button class="det-action outline" onclick="localMangaMenu('${esc(mangaKey)}')">⋯ More</button>
+    </div>
+    <div style="font-size:14px;font-weight:500;margin:20px 0 4px;padding-bottom:12px;border-bottom:1px solid var(--bd)">${chapters.length} chapters</div>
+    ${chHtml}
+  </div>`;
+}
+
+function closeLocalDetOverlay(){
+  document.getElementById('local-det-overlay').style.display='none';
+  _localCurKey=null; _localCurChaps=[];
+}
+
+// ════════════════════════════════════════════════════════════════
+//  READ CHAPTER
+// ════════════════════════════════════════════════════════════════
+function openLocalChapter(idx){
+  console.log('[LOCAL] openLocalChapter idx='+idx+' sourceId='+B.sourceId+' curKey='+_localCurKey);
+  // Fix: always set sourceId to local when called from overlay
+  B.sourceId='local';
+  if(!_localCurKey){
+    showToast('No manga selected',true);
+    console.error('[LOCAL] _localCurKey is null');
+    return;
+  }
+  openReader(idx);
+}
+
+async function openReader(idx){
+  // Local source
+  if(B.sourceId==='local'){
+    B.chIdx=idx;
+    const ch=B.chapters[idx];
+    const dbCh=_localCurChaps[idx];
+    console.log('[LOCAL] openReader idx='+idx+' ch=',ch,' dbCh=',dbCh,' curChaps.len='+_localCurChaps.length);
+    if(!ch||!dbCh){
+      console.error('[LOCAL] chapter missing: ch='+!!ch+' dbCh='+!!dbCh);
+      showToast('Chapter not found (idx='+idx+')',true);
+      return;
+    }
+
+    const mangaKey=B.manga.id;
+    console.log('[LOCAL] mangaKey='+mangaKey+' hasHandle='+!!_localHandles[mangaKey]+' fsDir='+!!_fsDir);
+
+    // Acquire handles if needed
+    if(!_localHandles[mangaKey]&&_fsDir){
+      try{
+        const m=await _ldbGet('manga',mangaKey);
+        console.log('[LOCAL] fetched manga record=',m?.mangaTitle);
+        if(m){
+          const sH=await _fsDir.getDirectoryHandle(m.sourceName);
+          const mH=await sH.getDirectoryHandle(m.mangaTitle);
+          const rawChs=[];
+          for await(const [n,h] of mH.entries())
+            if(h.kind==='directory') rawChs.push({name:n,dirHandle:h});
+          rawChs.sort((a,b)=>_chNum(a.name)-_chNum(b.name));
+          _localHandles[mangaKey]={dirHandle:mH,
+            chapters:rawChs.map(c=>({name:c.name,dirHandle:c.dirHandle,images:null}))};
+          console.log('[LOCAL] acquired handle, chapters='+rawChs.length);
+        }
+      }catch(e){console.error('[LOCAL] handle acquire failed:',e.message);}
+    }
+
+    const hInfo=_localHandles[mangaKey];
+    if(!hInfo){
+      console.error('[LOCAL] no handle for key='+mangaKey);
+      showToast('Tap ↻ to reconnect folder',true);
+      return;
+    }
+
+    const chHandle=hInfo.chapters.find(c=>c.name===dbCh.name);
+    console.log('[LOCAL] chHandle='+!!chHandle+' looking for name="'+dbCh.name+'" in '+hInfo.chapters.map(c=>c.name).join(','));
+    if(!chHandle){
+      showToast('Chapter folder "'+dbCh.name+'" not found',true);
+      return;
+    }
+
+    // Load images (lazy — only this chapter)
+    if(!chHandle.images||!chHandle.images.length){
+      const imgs=[];
+      try{
+        for await(const [fn,fh] of chHandle.dirHandle.entries())
+          if(fh.kind==='file'&&/\.(jpe?g|png|webp|gif|avif)$/i.test(fn)) imgs.push({name:fn,fh});
+        imgs.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+        console.log('[LOCAL] loaded '+imgs.length+' images');
+      }catch(e){
+        console.error('[LOCAL] image read failed:',e.message);
+        showToast('Cannot read chapter files: '+e.message,true);
+        return;
+      }
+      chHandle.images=imgs;
+    }
+    if(!chHandle.images.length){
+      console.error('[LOCAL] no images found in chapter');
+      showToast('No images found in chapter',true);
+      return;
+    }
+
+    // Build page URLs — lazy loading: first EAGER_N immediately, rest in background
+    const EAGER_N = parseInt(localStorage.getItem('rdr_batch')||'5');
+    console.log('[LOCAL] lazy loading: '+chHandle.images.length+' pages, eager='+EAGER_N);
+    _localObjUrls.forEach(u=>{try{URL.revokeObjectURL(u);}catch(e){}});
+    _localObjUrls=[];
+
+    // Build placeholder pages array
+    const pages = chHandle.images.map((img,i)=>({index:i, url:'', fh:img.fh}));
+
+    // Load first EAGER_N pages immediately
+    for(let i=0;i<Math.min(EAGER_N,pages.length);i++){
+      try{
+        const f=await pages[i].fh.getFile();
+        const u=URL.createObjectURL(f);
+        _localObjUrls.push(u);
+        pages[i].url=u;
+      }catch(e){ console.error('[LOCAL] eager load failed idx='+i,e.message); }
+    }
+    console.log('[LOCAL] eager loaded, opening reader');
+    if(!pages.some(p=>p.url)){showToast('Failed to load images',true);return;}
+
+    B.pages=pages;
+    const rv=document.getElementById('reader-view');
+    rv.classList.add('open');
+    if(!rv._touchReady){rdrInitTouch();rv._touchReady=true;}
+    setTimeout(initDoubleTapZoom,100);
+    renderReader(); rdrShowUI(false);
+    console.log('[LOCAL] reader opened, loading remaining pages in background');
+
+    // Load remaining pages in background chunks
+    const CHUNK = 5;
+    let i = EAGER_N;
+    async function loadNextChunk(){
+      if(i>=pages.length) return;
+      const end=Math.min(i+CHUNK,pages.length);
+      for(let j=i;j<end;j++){
+        if(pages[j].url) continue;
+        try{
+          const f=await pages[j].fh.getFile();
+          const u=URL.createObjectURL(f);
+          _localObjUrls.push(u);
+          pages[j].url=u;
+          // Update img src if already rendered
+          const imgEl=document.querySelector('.rpage[data-i="'+j+'"] img, #rpage-wrap .rpage[data-i="'+j+'"] img');
+          if(imgEl) imgEl.src=u;
+        }catch(e){}
+      }
+      i=end;
+      if(i<pages.length) setTimeout(loadNextChunk,100);
+    }
+    setTimeout(loadNextChunk,200);
+
+    // History
+    const hist=S.getHist().filter(h=>h.mangaId!==mangaKey);
+    hist.unshift({mangaId:mangaKey,mangaTitle:B.manga.title,chapter:dbCh.num,
+      chTitle:dbCh.title||dbCh.name,cover:B.manga.cover||'',sourceId:'local',readAt:Date.now()});
+    S.saveHist(hist.slice(0,200));
+    return;
+  }
+
+  // Normal source
+  await _openReaderNormal(idx);
+}
+
+function closeReader(){
+  if(rdrObserver){rdrObserver.disconnect();rdrObserver=null;}
+  clearTimeout(rdrUITimer);
+  _resetRotation();
+  document.getElementById('reader-view').classList.remove('open');
+  // Revoke local ObjectURLs
+  if(B.sourceId==='local'){
+    _localObjUrls.forEach(u=>{try{URL.revokeObjectURL(u);}catch(e){}});
+    _localObjUrls=[];
+    document.getElementById('local-det-overlay').style.display='flex';
+  }else{
+    document.getElementById('manga-detail').style.display='flex';
+  }
+}
+
+// Mark read on last page
+function onPageChange(pg){
+  if(pg>=B.pages.length&&B.pages.length>0){
+    if(B.sourceId==='local'){
+      const ch=B.chapters[B.chIdx];
+      if(ch){const r=S.getRead();r.add('local__'+B.manga.id+'__'+ch.chapter);S.saveRead(r);}
+    } else {
+      if(!isRead(B.chIdx)){
+        markRead(B.chIdx,true);
+        document.querySelectorAll('.ch-item').forEach((el,i)=>{
+          if(i===B.chIdx) el.classList.add('read');
+        });
+      }
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MERGE / DELETE / MENU
+// ════════════════════════════════════════════════════════════════
+function _getLocalMerges(){try{return JSON.parse(localStorage.getItem('mhub_local_merges')||'[]')}catch{return[]}}
+function _saveLocalMerges(a){localStorage.setItem('mhub_local_merges',JSON.stringify(a));}
+
+function localMangaMenu(mangaKey){
+  const sheet=document.createElement('div');
+  sheet.style.cssText='position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.6)';
+  sheet.innerHTML=`<div style="background:#1e1e1e;border-radius:20px 20px 0 0;padding:8px 0 24px">
+    <div style="width:36px;height:4px;background:#444;border-radius:99px;margin:12px auto 8px"></div>
+    <div class="more-item" onclick="this.closest('[style*=fixed]').remove();localDeleteMangaItem('${esc(mangaKey)}')">
+      <div class="more-ic" style="color:#f87171">🗑</div>
+      <div class="more-label" style="color:#f87171">Delete from device</div>
+    </div>
+    <div class="more-item" onclick="this.closest('[style*=fixed]').remove()">
+      <div class="more-ic">✕</div><div class="more-label">Cancel</div>
+    </div>
+  </div>`;
+  sheet.onclick=e=>{if(e.target===sheet)sheet.remove();};
+  document.body.appendChild(sheet);
+}
+
+async function localDeleteMangaItem(mangaKey){
+  const m=await _ldbGet('manga',mangaKey);
+  if(!m){showToast('Not found',true);return;}
+  if(!confirm('Delete "'+m.title+'" from device?')) return;
+  const hInfo=_localHandles[mangaKey];
+  if(hInfo?.dirHandle){
+    try{
+      const sH=await _fsDir.getDirectoryHandle(m.sourceName);
+      await sH.removeEntry(m.mangaTitle,{recursive:true});
+    }catch(e){showToast('Delete failed: '+e.message,true);return;}
+  }
+  await _ldbDelete('manga',mangaKey);
+  await _ldbDelete('covers',mangaKey);
+  const chs=await _ldbGetByIndex('chapters','byManga',mangaKey);
+  for(const ch of chs) await _ldbDelete('chapters',ch.id);
+  delete _localHandles[mangaKey];
+  closeLocalDetOverlay();
+  if(activeCatId==='__local__') renderLibContent();
+  showToast('✓ Deleted');
+}
+
+function _showLocalDetail(k){ openLocalMangaFromLib(k); }
+
+// ── libRefresh ──
+async function libRefresh(){
+  const btn=document.getElementById('lib-refresh-btn');
+  if(btn) btn.style.animation='spin .7s linear infinite';
+  try{
+    if(activeCatId==='__local__') await scanLocalLibrary();
+    else await checkUpdates(true);
+  }catch(e){ showToast('Error: '+e.message,true); }
+  if(btn) btn.style.animation='';
+}
+
+function localSyncFromLib(){ libRefresh(); }
+function showDownloadsPage(){ setLibCat('__local__'); switchPage('library'); }
+
 
 // ═══════════════════════════════ INIT ═══════════════════════════════
 renderLibrary();
